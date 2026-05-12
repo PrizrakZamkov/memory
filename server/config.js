@@ -17,9 +17,12 @@ if (existsSync('.env')) {
 
 export const config = {
   env: process.env.NODE_ENV || 'development',
+  host: process.env.HOST || (process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1'),
   port: Number(process.env.PORT || 4000),
   appOrigin: process.env.APP_ORIGIN || 'http://127.0.0.1:5173',
   publicAppUrl: process.env.PUBLIC_APP_URL || 'http://127.0.0.1:5173',
+  databaseUrl: process.env.DATABASE_URL || '',
+  databaseSsl: process.env.DATABASE_SSL !== 'false',
   databasePath: resolve(process.env.DATABASE_PATH || './data/storyline.sqlite'),
   sessionSecret: process.env.SESSION_SECRET || randomBytes(32).toString('hex'),
   encryptionKey: process.env.APP_ENCRYPTION_KEY || '',

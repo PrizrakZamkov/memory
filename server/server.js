@@ -2,11 +2,38 @@ import http from 'node:http';
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { extname, join, resolve } from 'node:path';
-import { db, encryptedPerson, encryptedStory, migrate, now, rowToPerson, rowToStory } from './db.js';
+import {
+  appendArchive,
+  createGoogleUser,
+  createPasswordUser,
+  createResetToken,
+  createSessionRow,
+  deletePerson,
+  deleteSessionByTokenHash,
+  deleteSessionsByUser,
+  deleteStory,
+  findSessionByTokenHash,
+  findUserByEmail,
+  findUserByGoogleOrEmail,
+  findUserById,
+  findValidResetToken,
+  linkGoogleUser,
+  listPeople,
+  listStories,
+  markResetTokenUsed,
+  migrate,
+  now,
+  replaceArchive,
+  savePerson,
+  saveStory,
+  updatePassword,
+  updatePerson,
+  updateStory
+} from './db.js';
 import { config, isProd } from './config.js';
 import { hashPassword, newToken, tokenHash, verifyPassword } from './crypto.js';
 
-migrate();
+await migrate();
 
 const rateBuckets = new Map();
 const distDir = resolve('dist');
@@ -108,19 +135,18 @@ function publicUser(user) {
   return user && { id: user.id, email: user.email, name: user.name || '', emailVerified: Boolean(user.email_verified) };
 }
 
-function currentUser(req) {
+async function currentUser(req) {
   const token = parseCookies(req).sid;
   if (!token) return null;
-  const session = db.prepare('SELECT * FROM sessions WHERE token_hash = ? AND expires_at > ?').get(tokenHash(token), now());
+  const session = await findSessionByTokenHash(tokenHash(token));
   if (!session) return null;
-  return db.prepare('SELECT * FROM users WHERE id = ?').get(session.user_id);
+  return findUserById(session.user_id);
 }
 
 async function createSession(res, req, userId) {
   const token = newToken(48);
   const expires = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30);
-  db.prepare('INSERT INTO sessions (id,user_id,token_hash,expires_at,created_at,user_agent,ip) VALUES (?,?,?,?,?,?,?)')
-    .run(randomUUID(), userId, tokenHash(token), expires.toISOString(), now(), req.headers['user-agent'] || '', clientIp(req));
+  await createSessionRow(randomUUID(), userId, tokenHash(token), expires.toISOString(), req.headers['user-agent'] || '', clientIp(req));
   setSessionCookie(res, token, expires);
 }
 
@@ -135,20 +161,19 @@ async function authRoutes(req, res, url) {
     const password = await hashPassword(String(body.password));
     const id = randomUUID();
     try {
-      db.prepare('INSERT INTO users (id,email,password_hash,name,email_verified,created_at,updated_at) VALUES (?,?,?,?,?,?,?)')
-        .run(id, email, password, String(body.name || '').trim(), 0, now(), now());
+      await createPasswordUser(id, email, password, String(body.name || '').trim());
     } catch {
       return json(res, 409, { error: 'Email is already registered' }), true;
     }
     await createSession(res, req, id);
-    return json(res, 201, { user: publicUser(db.prepare('SELECT * FROM users WHERE id = ?').get(id)) }), true;
+    return json(res, 201, { user: publicUser(await findUserById(id)) }), true;
   }
 
   if (url.pathname === '/api/auth/login' && req.method === 'POST') {
     if (!rateLimit(req, res, 'login', 10, 60_000)) return true;
     const body = await readBody(req);
     requireFields(body, ['email', 'password']);
-    const user = db.prepare('SELECT * FROM users WHERE email = ? COLLATE NOCASE').get(String(body.email).trim().toLowerCase());
+    const user = await findUserByEmail(String(body.email).trim().toLowerCase());
     if (!user || !user.password_hash || !(await verifyPassword(String(body.password), user.password_hash))) {
       return json(res, 401, { error: 'Invalid email or password' }), true;
     }
@@ -158,25 +183,24 @@ async function authRoutes(req, res, url) {
 
   if (url.pathname === '/api/auth/logout' && req.method === 'POST') {
     const token = parseCookies(req).sid;
-    if (token) db.prepare('DELETE FROM sessions WHERE token_hash = ?').run(tokenHash(token));
+    if (token) await deleteSessionByTokenHash(tokenHash(token));
     clearSessionCookie(res);
     return json(res, 200, { ok: true }), true;
   }
 
   if (url.pathname === '/api/auth/me' && req.method === 'GET') {
-    return json(res, 200, { user: publicUser(currentUser(req)) }), true;
+    return json(res, 200, { user: publicUser(await currentUser(req)) }), true;
   }
 
   if (url.pathname === '/api/auth/forgot-password' && req.method === 'POST') {
     if (!rateLimit(req, res, 'forgot', 5, 60_000)) return true;
     const body = await readBody(req);
-    const user = db.prepare('SELECT * FROM users WHERE email = ? COLLATE NOCASE').get(String(body.email || '').trim().toLowerCase());
+    const user = await findUserByEmail(String(body.email || '').trim().toLowerCase());
     let resetLink = null;
     if (user) {
       const token = newToken(32);
       const expires = new Date(Date.now() + 1000 * 60 * 30);
-      db.prepare('INSERT INTO password_reset_tokens (id,user_id,token_hash,expires_at,created_at) VALUES (?,?,?,?,?)')
-        .run(randomUUID(), user.id, tokenHash(token), expires.toISOString(), now());
+      await createResetToken(randomUUID(), user.id, tokenHash(token), expires.toISOString());
       resetLink = `${config.publicAppUrl}/reset-password?token=${token}`;
       if (isProd) console.log(`Password reset requested for ${user.email}. Configure a mail provider to send: ${resetLink}`);
     }
@@ -188,11 +212,11 @@ async function authRoutes(req, res, url) {
     const body = await readBody(req);
     requireFields(body, ['token', 'password']);
     if (String(body.password).length < 10) return json(res, 400, { error: 'Password must be at least 10 characters' }), true;
-    const row = db.prepare('SELECT * FROM password_reset_tokens WHERE token_hash = ? AND used_at IS NULL AND expires_at > ?').get(tokenHash(String(body.token)), now());
+    const row = await findValidResetToken(tokenHash(String(body.token)));
     if (!row) return json(res, 400, { error: 'Invalid or expired reset link' }), true;
-    db.prepare('UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?').run(await hashPassword(String(body.password)), now(), row.user_id);
-    db.prepare('UPDATE password_reset_tokens SET used_at = ? WHERE id = ?').run(now(), row.id);
-    db.prepare('DELETE FROM sessions WHERE user_id = ?').run(row.user_id);
+    await updatePassword(row.user_id, await hashPassword(String(body.password)));
+    await markResetTokenUsed(row.id);
+    await deleteSessionsByUser(row.user_id);
     return json(res, 200, { ok: true }), true;
   }
 
@@ -225,14 +249,13 @@ async function authRoutes(req, res, url) {
     const profileRes = await fetch('https://openidconnect.googleapis.com/v1/userinfo', { headers: { Authorization: `Bearer ${tokenData.access_token}` } });
     const profile = await profileRes.json();
     if (!profile.email || !profile.sub) return json(res, 401, { error: 'Google login failed' }), true;
-    let user = db.prepare('SELECT * FROM users WHERE google_sub = ? OR email = ? COLLATE NOCASE').get(profile.sub, profile.email);
+    let user = await findUserByGoogleOrEmail(profile.sub, profile.email);
     if (!user) {
       const id = randomUUID();
-      db.prepare('INSERT INTO users (id,email,name,email_verified,google_sub,created_at,updated_at) VALUES (?,?,?,?,?,?,?)')
-        .run(id, profile.email.toLowerCase(), profile.name || '', profile.email_verified ? 1 : 0, profile.sub, now(), now());
-      user = db.prepare('SELECT * FROM users WHERE id = ?').get(id);
+      await createGoogleUser(id, profile.email.toLowerCase(), profile.name || '', profile.email_verified, profile.sub);
+      user = await findUserById(id);
     } else if (!user.google_sub) {
-      db.prepare('UPDATE users SET google_sub = ?, email_verified = 1, updated_at = ? WHERE id = ?').run(profile.sub, now(), user.id);
+      await linkGoogleUser(user.id, profile.sub);
     }
     await createSession(res, req, user.id);
     res.writeHead(302, { Location: config.publicAppUrl, ...securityHeaders() });
@@ -244,12 +267,12 @@ async function authRoutes(req, res, url) {
 }
 
 async function apiRoutes(req, res, url) {
-  const user = currentUser(req);
+  const user = await currentUser(req);
   if (!user) return json(res, 401, { error: 'Authentication required' }), true;
 
   if (url.pathname === '/api/export' && req.method === 'GET') {
-    const people = db.prepare('SELECT * FROM people WHERE user_id = ? ORDER BY created_at ASC').all(user.id).map(rowToPerson);
-    const stories = db.prepare('SELECT * FROM stories WHERE user_id = ? ORDER BY happened_at ASC, created_at ASC').all(user.id).map(rowToStory);
+    const people = await listPeople(user.id, 'ASC');
+    const stories = await listStories(user.id, 'ASC');
     return json(res, 200, { version: 1, exportedAt: now(), people, stories }), true;
   }
 
@@ -259,93 +282,54 @@ async function apiRoutes(req, res, url) {
     const people = Array.isArray(body.people) ? body.people : [];
     const stories = Array.isArray(body.stories) ? body.stories : [];
     const replace = body.mode !== 'append';
-    db.exec('BEGIN');
-    try {
-      if (replace) {
-        db.prepare('DELETE FROM stories WHERE user_id = ?').run(user.id);
-        db.prepare('DELETE FROM people WHERE user_id = ?').run(user.id);
-      }
-      const personIdMap = new Map();
-      for (const person of people) {
-        if (!person?.fname) continue;
-        const id = randomUUID();
-        personIdMap.set(person.id, id);
-        const data = encryptedPerson(person);
-        db.prepare('INSERT OR REPLACE INTO people (id,user_id,fname,lname,games,desc_enc,met_enc,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?)')
-          .run(id, user.id, data.fname, data.lname, data.games, data.desc_enc, data.met_enc, now(), now());
-      }
-      for (const story of stories) {
-        if (!story?.title || !story?.story) continue;
-        const mappedPeople = (story.people || []).map(id => personIdMap.get(id) || id).filter(Boolean);
-        const data = encryptedStory({ ...story, people: mappedPeople });
-        db.prepare('INSERT OR REPLACE INTO stories (id,user_id,title,story_enc,game,tags_json,people_json,people_raw_json,random_player_count,accent,starred,happened_at,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
-          .run(randomUUID(), user.id, data.title, data.story_enc, data.game, data.tags_json, data.people_json, data.people_raw_json, data.random_player_count, data.accent, data.starred, data.happened_at, now(), now());
-      }
-      db.exec('COMMIT');
-    } catch (err) {
-      db.exec('ROLLBACK');
-      throw err;
-    }
+    if (replace) await replaceArchive(user.id, people, stories, randomUUID);
+    else await appendArchive(user.id, people, stories, randomUUID);
     return json(res, 200, { ok: true, imported: { people: people.length, stories: stories.length } }), true;
   }
 
   if (url.pathname === '/api/people' && req.method === 'GET') {
-    const rows = db.prepare('SELECT * FROM people WHERE user_id = ? ORDER BY created_at DESC').all(user.id);
-    return json(res, 200, { people: rows.map(rowToPerson) }), true;
+    return json(res, 200, { people: await listPeople(user.id) }), true;
   }
 
   if (url.pathname === '/api/people' && req.method === 'POST') {
     const body = await readBody(req);
     requireFields(body, ['fname']);
-    const data = encryptedPerson(body);
     const id = randomUUID();
-    db.prepare('INSERT INTO people (id,user_id,fname,lname,games,desc_enc,met_enc,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?)')
-      .run(id, user.id, data.fname, data.lname, data.games, data.desc_enc, data.met_enc, now(), now());
-    return json(res, 201, { person: rowToPerson(db.prepare('SELECT * FROM people WHERE id = ? AND user_id = ?').get(id, user.id)) }), true;
+    return json(res, 201, { person: await savePerson(user.id, id, body) }), true;
   }
 
   const peopleMatch = url.pathname.match(/^\/api\/people\/([^/]+)$/);
   if (peopleMatch && req.method === 'PATCH') {
     const body = await readBody(req);
     requireFields(body, ['fname']);
-    const data = encryptedPerson(body);
-    db.prepare('UPDATE people SET fname=?,lname=?,games=?,desc_enc=?,met_enc=?,updated_at=? WHERE id=? AND user_id=?')
-      .run(data.fname, data.lname, data.games, data.desc_enc, data.met_enc, now(), peopleMatch[1], user.id);
-    return json(res, 200, { person: rowToPerson(db.prepare('SELECT * FROM people WHERE id = ? AND user_id = ?').get(peopleMatch[1], user.id)) }), true;
+    return json(res, 200, { person: await updatePerson(user.id, peopleMatch[1], body) }), true;
   }
 
   if (peopleMatch && req.method === 'DELETE') {
-    db.prepare('DELETE FROM people WHERE id = ? AND user_id = ?').run(peopleMatch[1], user.id);
+    await deletePerson(user.id, peopleMatch[1]);
     return json(res, 200, { ok: true }), true;
   }
 
   if (url.pathname === '/api/stories' && req.method === 'GET') {
-    const rows = db.prepare('SELECT * FROM stories WHERE user_id = ? ORDER BY happened_at DESC, created_at DESC').all(user.id);
-    return json(res, 200, { stories: rows.map(rowToStory) }), true;
+    return json(res, 200, { stories: await listStories(user.id) }), true;
   }
 
   if (url.pathname === '/api/stories' && req.method === 'POST') {
     const body = await readBody(req);
     requireFields(body, ['title', 'story']);
-    const data = encryptedStory(body);
     const id = randomUUID();
-    db.prepare('INSERT INTO stories (id,user_id,title,story_enc,game,tags_json,people_json,people_raw_json,random_player_count,accent,starred,happened_at,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
-      .run(id, user.id, data.title, data.story_enc, data.game, data.tags_json, data.people_json, data.people_raw_json, data.random_player_count, data.accent, data.starred, data.happened_at, now(), now());
-    return json(res, 201, { story: rowToStory(db.prepare('SELECT * FROM stories WHERE id = ? AND user_id = ?').get(id, user.id)) }), true;
+    return json(res, 201, { story: await saveStory(user.id, id, body) }), true;
   }
 
   const storyMatch = url.pathname.match(/^\/api\/stories\/([^/]+)$/);
   if (storyMatch && req.method === 'PATCH') {
     const body = await readBody(req);
     requireFields(body, ['title', 'story']);
-    const data = encryptedStory(body);
-    db.prepare('UPDATE stories SET title=?,story_enc=?,game=?,tags_json=?,people_json=?,people_raw_json=?,random_player_count=?,accent=?,starred=?,happened_at=?,updated_at=? WHERE id=? AND user_id=?')
-      .run(data.title, data.story_enc, data.game, data.tags_json, data.people_json, data.people_raw_json, data.random_player_count, data.accent, data.starred, data.happened_at, now(), storyMatch[1], user.id);
-    return json(res, 200, { story: rowToStory(db.prepare('SELECT * FROM stories WHERE id = ? AND user_id = ?').get(storyMatch[1], user.id)) }), true;
+    return json(res, 200, { story: await updateStory(user.id, storyMatch[1], body) }), true;
   }
 
   if (storyMatch && req.method === 'DELETE') {
-    db.prepare('DELETE FROM stories WHERE id = ? AND user_id = ?').run(storyMatch[1], user.id);
+    await deleteStory(user.id, storyMatch[1]);
     return json(res, 200, { ok: true }), true;
   }
 
@@ -385,6 +369,6 @@ const server = http.createServer(async (req, res) => {
 
 server.headersTimeout = 10_000;
 server.requestTimeout = 15_000;
-server.listen(config.port, '127.0.0.1', () => {
-  console.log(`Storyline API listening on http://127.0.0.1:${config.port}`);
+server.listen(config.port, config.host, () => {
+  console.log(`Storyline API listening on http://${config.host}:${config.port}`);
 });
