@@ -1,69 +1,94 @@
 # Storyline Service
 
-Новая версия приложения находится в React + Node API. Старый `storyline.html` оставлен нетронутым и больше не нужен для работы сервиса.
+Storyline — веб-приложение для хранения историй и информации о людях, с которыми они связаны.
 
-## Что реализовано
+Приложение состоит из React-клиента и Node.js API. Старый `storyline.html` сохранён в репозитории для истории, но в работе текущей версии сервиса не используется.
 
-- Приватные аккаунты: каждый `story`, `person` и session привязаны к `user_id`.
-- Регистрация по email/password.
-- Вход/выход через httpOnly session cookie.
-- Восстановление пароля через одноразовый token.
-- Заготовка Google OAuth.
-- SQLite база через встроенный `node:sqlite`.
-- Шифрование приватных полей AES-256-GCM:
-  - текст истории;
-  - описание человека;
-  - поле `How you met`.
-- Rate limiting на auth endpoints.
-- Проверка Origin для state-changing запросов.
-- Ограничение размера JSON body.
-- Security headers.
+## Возможности
+
+* Регистрация и вход по email и паролю.
+* Сессионная авторизация через `httpOnly` cookie.
+* Выход из аккаунта.
+* Восстановление пароля по одноразовой ссылке.
+* Изоляция данных пользователей: `story`, `person` и сессии связаны с конкретным `user_id`.
+* Загрузка и хранение данных в SQLite.
+* Шифрование приватных данных с помощью AES-256-GCM:
+
+  * текста истории;
+  * описания человека;
+  * поля `How you met`.
+* Подготовка к авторизации через Google OAuth.
+* Rate limiting для authentication endpoints.
+* Проверка `Origin` для запросов, которые изменяют данные.
+* Ограничение размера JSON-запросов.
+* Security headers.
+* Хеширование паролей через `scrypt`.
+* Reset-токены хранятся в базе только в виде SHA-256 hash.
+
+## Требования
+
+Для запуска проекта локально нужен Node.js с поддержкой встроенного `node:sqlite`.
 
 ## Локальный запуск
 
-1. Установить зависимости:
+Установите зависимости:
 
 ```bash
 npm install
 ```
 
-2. Создать `.env` из `.env.example`.
+Создайте `.env` на основе `.env.example`:
 
-3. Сгенерировать ключи:
+```bash
+cp .env.example .env
+```
+
+Для Windows можно просто скопировать файл вручную.
+
+### Секретные ключи
+
+Сгенерируйте ключ шифрования приложения:
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+```
+
+И секрет для сессий:
+
+```bash
 node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 ```
 
-Первый вставить в `APP_ENCRYPTION_KEY`, второй в `SESSION_SECRET`.
+Добавьте полученные значения в `.env`:
 
-4. Запустить dev-режим:
+```env
+APP_ENCRYPTION_KEY=...
+SESSION_SECRET=...
+```
+
+**Не коммитьте `.env` и не храните `APP_ENCRYPTION_KEY` вместе с резервными копиями базы данных.**
+
+### Запуск в development
 
 ```bash
 npm run dev
 ```
 
-Открыть:
+После запуска:
 
-```text
-http://127.0.0.1:3000
-```
-
-API работает на:
-
-```text
-http://127.0.0.1:4000
-```
+* приложение: `http://127.0.0.1:3000`
+* API: `http://127.0.0.1:4000`
 
 ## Google OAuth
 
-В Google Cloud Console создать OAuth Client:
+Поддержка Google OAuth подготовлена, но для работы в production нужно создать OAuth Client в Google Cloud Console.
 
-- Authorized JavaScript origin: `https://your-domain.com`
-- Authorized redirect URI: `https://your-domain.com/api/auth/google/callback`
+Укажите:
 
-В `.env`:
+* **Authorized JavaScript origin:** `https://your-domain.com`
+* **Authorized redirect URI:** `https://your-domain.com/api/auth/google/callback`
+
+И добавьте настройки в `.env`:
 
 ```env
 GOOGLE_CLIENT_ID=...
@@ -73,37 +98,50 @@ PUBLIC_APP_URL=https://your-domain.com
 APP_ORIGIN=https://your-domain.com
 ```
 
-## Сборка
+## Production
+
+Соберите приложение:
 
 ```bash
 npm run build
 ```
 
-Production запуск:
+Запустите production-сервер:
 
 ```bash
 NODE_ENV=production npm start
 ```
 
-На Windows PowerShell:
+В Windows PowerShell:
 
 ```powershell
 $env:NODE_ENV="production"; npm start
 ```
 
-## Публикация в интернете
+Для production рекомендуется не выставлять Node.js API напрямую в интернет. Типичная схема выглядит так:
 
-Рекомендуемая схема:
+```text
+Internet
+   │
+   ▼
+Cloudflare
+   │
+   ▼
+Caddy / Nginx
+   │
+   ▼
+Node.js API
+127.0.0.1:4000
+   │
+   ▼
+SQLite
+```
 
-1. VPS или PaaS: Fly.io, Render, Railway, Hetzner, DigitalOcean.
-2. Reverse proxy: Caddy или Nginx.
-3. HTTPS обязательно.
-4. Node-сервер слушает только `127.0.0.1:4000`.
-5. Caddy/Nginx принимает внешний HTTPS и проксирует на Node.
-6. БД и `.env` не коммитить.
-7. Делать автоматические backups папки `data/`.
+Приложение можно разместить на VPS или PaaS, например Fly.io, Render, Railway, Hetzner или DigitalOcean.
 
-Пример Caddy:
+### Reverse proxy
+
+Например, с Caddy:
 
 ```caddyfile
 your-domain.com {
@@ -112,49 +150,119 @@ your-domain.com {
 }
 ```
 
-## Защита от DDoS и кражи данных
+HTTPS для production обязателен.
 
-То, что уже есть в коде:
+Базовые правила:
 
-- auth rate limiting;
-- body size limit 128 KB;
-- request timeout;
-- security headers;
-- httpOnly cookies;
-- SameSite Strict cookies;
-- Secure cookies в production;
-- проверка Origin;
-- password hashing через `scrypt`;
-- reset tokens хранятся только как SHA-256 hash;
-- приватные поля шифруются перед записью в БД.
+* Node.js должен слушать только `127.0.0.1:4000`.
+* Внешний трафик должен идти через HTTPS.
+* `.env` и база данных не должны попадать в Git.
+* Каталог `data/` нужно регулярно резервировать.
+* Прямой доступ к порту Node.js нужно закрыть firewall-ом.
 
-Что обязательно сделать на production:
+## Безопасность
 
-- поставить Cloudflare перед доменом;
-- включить Cloudflare WAF и DDoS protection;
-- включить HTTPS only;
-- закрыть прямой доступ к Node-порту firewall-ом;
-- хранить `.env` только на сервере;
-- хранить `APP_ENCRYPTION_KEY` отдельно от backup БД;
-- регулярно обновлять Node и npm-пакеты;
-- включить server snapshots/backups;
-- добавить SMTP-провайдера для реальной отправки reset email;
-- добавить мониторинг логов и алерты;
-- добавить лимиты на reverse proxy:
+В приложении уже предусмотрены несколько базовых мер защиты:
+
+* `httpOnly` cookies;
+* `SameSite=Strict`;
+* `Secure` cookies в production;
+* проверка `Origin` для state-changing запросов;
+* rate limiting для auth endpoints;
+* ограничение JSON body до 128 KB;
+* request timeout;
+* security headers;
+* `scrypt` для хеширования паролей;
+* хранение reset-токенов только в виде SHA-256 hash;
+* AES-256-GCM для приватных полей;
+* привязка пользовательских данных к `user_id`.
+
+Это не означает, что сервис невозможно взломать. Безопасность — это набор мер, а не абсолютная гарантия. На production также важно правильно настроить инфраструктуру и регулярно обновлять зависимости.
+
+### Что сделать перед production
+
+Перед публичным запуском рекомендуется:
+
+1. Поставить Cloudflare перед доменом.
+2. Включить WAF и DDoS protection.
+3. Принудительно использовать HTTPS.
+4. Закрыть внешний доступ к Node.js-порту через firewall.
+5. Хранить `.env` только на сервере.
+6. Хранить `APP_ENCRYPTION_KEY` отдельно от backup базы данных.
+7. Настроить автоматические backups.
+8. Регулярно обновлять Node.js и npm-зависимости.
+9. Настроить SMTP-провайдера для отправки писем восстановления пароля.
+10. Добавить мониторинг логов и уведомления об ошибках.
+
+Если используется Nginx, на уровне reverse proxy также можно добавить дополнительные ограничения:
 
 ```nginx
 limit_req_zone $binary_remote_addr zone=auth:10m rate=5r/m;
 client_max_body_size 128k;
 ```
 
-Важно: абсолютной гарантии “НИКОГДА не украдут” не существует ни у одного сервиса. Но текущая архитектура снижает риск: данные приватны по `user_id`, самые чувствительные поля зашифрованы, cookies защищены, пароли не хранятся в открытом виде, а production-инструкция закрывает основные сетевые риски.
+## База данных
 
-## Что стоит добавить следующим этапом
+Сейчас используется SQLite через встроенный `node:sqlite`.
 
-- Подтверждение email.
-- Реальную SMTP-отправку reset links.
-- 2FA/TOTP.
-- Экспорт всех данных пользователя.
-- Удаление аккаунта с полной очисткой данных.
-- Audit log для входов и смены пароля.
-- PostgreSQL вместо SQLite, если будет много пользователей.
+Для небольшого и умеренного количества пользователей этого достаточно и не требует отдельного database-сервера.
+
+Если проект будет существенно расти, имеет смысл перейти на PostgreSQL. Это особенно актуально для большого количества одновременных запросов, нескольких экземпляров приложения и более сложной инфраструктуры.
+
+## Backups
+
+База данных содержит пользовательские данные, поэтому backups должны быть регулярными.
+
+При этом ключ шифрования нельзя хранить рядом с backup базы:
+
+```text
+Database backup
+       +
+APP_ENCRYPTION_KEY
+       =
+скомпрометированные зашифрованные данные могут стать доступными
+```
+
+Ключ должен храниться отдельно и иметь собственную политику резервного копирования и восстановления.
+
+## Development
+
+Установка зависимостей:
+
+```bash
+npm install
+```
+
+Запуск development-окружения:
+
+```bash
+npm run dev
+```
+
+Production build:
+
+```bash
+npm run build
+```
+
+Production start:
+
+```bash
+npm start
+```
+
+## Планируемые улучшения
+
+Следующие задачи логично добавить по мере развития проекта:
+
+* [ ] Подтверждение email.
+* [ ] Реальная отправка reset links через SMTP.
+* [ ] 2FA/TOTP.
+* [ ] Экспорт всех пользовательских данных.
+* [ ] Полное удаление аккаунта и связанных данных.
+* [ ] Audit log для входов и смены пароля.
+* [ ] PostgreSQL для более крупной установки.
+
+## License
+
+Лицензия проекта пока не указана.
