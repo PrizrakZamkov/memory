@@ -1,0 +1,65 @@
+@font-face {
+  font-family: 'Exo 2';
+  src: url('../assets/fonts/exo2.woff') format('woff');
+  font-weight: 600 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Onest';
+  src: url('../assets/fonts/onest.woff') format('woff');
+  font-weight: 400 600;
+  font-display: swap;
+}
+
+/* "Ice" theme: dark is the default, light is the alternative. */
+:root,
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #161b24;
+  --panel: #1e2530;
+  --raised: #2a3342;
+  --line: #333f51;
+  --text: #eef2f7;
+  --sub: #b9c3d1;
+  --muted: #93a0b3;
+  --accent: #8cc8ff;
+  --accent-text: #9dd0ff;
+  --on-accent: #0b2440;
+  --accent-soft: #26405f;
+  --danger: #ff8f8f;
+  --warning: #ffd27a;
+  --backdrop: rgba(6, 9, 14, 0.66);
+  --shadow: 0 18px 40px rgba(0, 0, 0, 0.38);
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #f2f5f9;
+  --panel: #ffffff;
+  --raised: #e9eef5;
+  --line: #d5dde8;
+  --text: #131922;
+  --sub: #3d4859;
+  --muted: #5b677a;
+  --accent: #1f63c7;
+  --accent-text: #1a56ae;
+  --on-accent: #ffffff;
+  --accent-soft: #dae7fa;
+  --danger: #c22f2f;
+  --warning: #8a5a00;
+  --backdrop: rgba(19, 25, 34, 0.42);
+  --shadow: 0 18px 40px rgba(19, 25, 34, 0.16);
+}
+
+:root {
+  --font-head: 'Exo 2', 'Segoe UI', system-ui, sans-serif;
+  --font-body: 'Onest', 'Segoe UI', system-ui, sans-serif;
+  --radius: 14px;
+  --radius-sm: 10px;
+  --fast: 120ms;
+  --base: 200ms;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --header-h: 68px;
+  --bottom-h: 68px;
+}
