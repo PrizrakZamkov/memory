@@ -1,12 +1,15 @@
 // Encrypted storage for people, stories, images and the story draft.
+// Every record row carries `t`, the time of the last change, so devices can sync.
+// A deleted record stays as a small tombstone row, so the deletion reaches other devices too.
 import { decryptBytes, decryptJson, encryptBytes, encryptJson } from './crypto.js';
 
-export function createRepo(db, key) {
+export function createRepo(db, key, onChange = () => {}) {
   return {
     async loadAll() {
       const people = [];
       const stories = [];
       for (const [id, row] of await db.entries('records')) {
+        if (row.deleted) continue;
         const item = await decryptJson(key, row.box, `${row.kind}:${id}`);
         if (row.kind === 'person') people.push(item);
         else stories.push(item);
@@ -16,16 +19,21 @@ export function createRepo(db, key) {
 
     async save(kind, item) {
       const box = await encryptJson(key, item, `${kind}:${item.id}`);
-      await db.put('records', item.id, { kind, box });
+      await db.put('records', item.id, { kind, box, t: Date.now() });
+      onChange();
     },
 
     async remove(id) {
-      await db.delete('records', id);
+      const row = await db.get('records', id);
+      if (!row) return;
+      await db.put('records', id, { kind: row.kind, deleted: true, t: Date.now() });
+      onChange();
     },
 
     async saveImage(id, bytes, type) {
       const box = await encryptBytes(key, bytes, `image:${id}`);
       await db.put('blobs', id, { type, box });
+      onChange();
     },
 
     async loadImage(id) {
@@ -47,19 +55,39 @@ export function createRepo(db, key) {
       await db.delete('meta', 'draft');
     },
 
+    async loadProfile() {
+      const box = await db.get('meta', 'profile');
+      return box ? decryptJson(key, box, 'profile') : {};
+    },
+
+    async saveProfile(profile) {
+      await db.put('meta', 'profile', await encryptJson(key, profile, 'profile'));
+    },
+
     // Deletes image blobs that no story or person points to any more.
+    // Returns the deleted ids, so the server copies can be removed as well.
     async removeUnusedImages(people, stories, draft) {
-      const used = new Set();
-      for (const person of people) if (person.photo) used.add(person.photo);
-      for (const story of [...stories, ...(draft ? [draft] : [])]) {
-        for (const image of story.images || []) {
-          used.add(image.id);
-          used.add(`${image.id}.thumb`);
+      const used = usedImageIds(people, [...stories, ...(draft ? [draft] : [])]);
+      const removed = [];
+      for (const [id] of await db.entries('blobs')) {
+        if (!used.has(id)) {
+          await db.delete('blobs', id);
+          removed.push(id);
         }
       }
-      for (const [id] of await db.entries('blobs')) {
-        if (!used.has(id)) await db.delete('blobs', id);
-      }
+      return removed;
     }
   };
+}
+
+export function usedImageIds(people, stories) {
+  const used = new Set();
+  for (const person of people) if (person.photo) used.add(person.photo);
+  for (const story of stories) {
+    for (const image of story.images || []) {
+      used.add(image.id);
+      used.add(`${image.id}.thumb`);
+    }
+  }
+  return used;
 }

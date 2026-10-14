@@ -4,7 +4,7 @@
 //  - or by a passcode, if the user turned on "passcode to open";
 //  - always by the recovery key, the user's way back in.
 import {
-  decryptJson, encryptJson, formatRecoveryKey, generateDataKey, generateDeviceKey,
+  decryptBytes, decryptJson, encryptBytes, encryptJson, formatRecoveryKey, generateDataKey, generateDeviceKey,
   keyFromPasscode, keyFromRecovery, newRecoveryBytes, parseRecoveryKey,
   PASSCODE_ITERATIONS, randomBytes, unwrapKey, wrapKey
 } from './crypto.js';
@@ -73,14 +73,72 @@ export async function unlockWithPasscode(db, passcode) {
 }
 
 export async function unlockWithRecovery(db, text) {
-  const bytes = parseRecoveryKey(text);
-  if (!bytes) throw new Error('bad-recovery-format');
   const vault = await readVault(db);
   if (!vault) throw new Error('no-vault');
+  return unlockHeader(vault, text);
+}
+
+// The "header" is the part of the vault that is safe to copy anywhere:
+// the data key wrapped by the recovery key, and the recovery key text encrypted by the data key.
+// It goes into backup files and to the sync server.
+export async function vaultHeader(db) {
+  const vault = await readVault(db);
+  return { recovery: vault.recovery, recoveryText: vault.recoveryText };
+}
+
+export async function unlockHeader(header, text) {
+  const bytes = parseRecoveryKey(text);
+  if (!bytes) throw new Error('bad-recovery-format');
   try {
-    return await unwrapKey(vault.recovery, await keyFromRecovery(bytes, vault.recovery.salt));
+    return await unwrapKey(header.recovery, await keyFromRecovery(bytes, header.recovery.salt));
   } catch {
     throw new Error('wrong-recovery');
+  }
+}
+
+// True when this data key belongs to that header.
+export async function keyMatchesHeader(dataKey, header) {
+  try {
+    await decryptJson(dataKey, header.recoveryText, 'recovery');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Builds a vault on this device from a key that came from a backup or another device.
+export async function createVaultFromKey(db, dataKey, header) {
+  const old = await readVault(db);
+  await writeVault(db, {
+    version: 1,
+    createdAt: old?.createdAt || new Date().toISOString(),
+    device: await wrapKey(dataKey, await deviceKey(db)),
+    passcode: null,
+    recovery: header.recovery,
+    recoveryText: header.recoveryText,
+    recoverySaved: true,
+    autoLockMinutes: old?.autoLockMinutes ?? 15,
+    lastBackupAt: old?.lastBackupAt || null
+  });
+}
+
+// Re-encrypts everything on this device with another data key.
+// Used when this device joins an account whose data uses a different key.
+export async function rekeyLocalData(db, oldKey, newKey) {
+  for (const [id, row] of await db.entries('records')) {
+    if (row.deleted) continue;
+    const label = `${row.kind}:${id}`;
+    const value = await decryptJson(oldKey, row.box, label);
+    await db.put('records', id, { ...row, box: await encryptJson(newKey, value, label), t: Date.now() });
+  }
+  for (const [id, row] of await db.entries('blobs')) {
+    const label = `image:${id}`;
+    const bytes = await decryptBytes(oldKey, row.box, label);
+    await db.put('blobs', id, { ...row, box: await encryptBytes(newKey, bytes, label) });
+  }
+  for (const name of ['draft', 'profile']) {
+    const box = await db.get(META, name);
+    if (box) await db.put(META, name, await encryptJson(newKey, await decryptJson(oldKey, box, name), name));
   }
 }
 
@@ -112,7 +170,8 @@ export async function getVaultSettings(db) {
   return {
     hasPasscode: Boolean(vault?.passcode),
     recoverySaved: Boolean(vault?.recoverySaved),
-    autoLockMinutes: vault?.autoLockMinutes ?? 15
+    autoLockMinutes: vault?.autoLockMinutes ?? 15,
+    lastBackupAt: vault?.lastBackupAt || null
   };
 }
 
@@ -120,5 +179,6 @@ export async function updateVaultSettings(db, patch) {
   const vault = await readVault(db);
   if ('recoverySaved' in patch) vault.recoverySaved = Boolean(patch.recoverySaved);
   if ('autoLockMinutes' in patch) vault.autoLockMinutes = Number(patch.autoLockMinutes) || 15;
+  if ('lastBackupAt' in patch) vault.lastBackupAt = patch.lastBackupAt;
   await writeVault(db, vault);
 }

@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { cleanPerson, cleanStory } from '../src/core/model.js';
 import { formatSince, formatWhen, sortKey } from '../src/core/dates.js';
-import { facets, filterStories, firstMet, sortStories, suggestPeople } from '../src/core/search.js';
+import { facets, filterStories, firstMet, onThisDay, sortStories, suggestPeople } from '../src/core/search.js';
 
 const kira = cleanPerson({ id: 'p1', firstName: 'Кира', nicks: [{ game: 'Dota 2', nick: 'k1ra' }] });
 const vanya = cleanPerson({ id: 'p2', firstName: 'Ваня' });
@@ -55,6 +55,17 @@ test('people suggestions match by name and by nick', () => {
   assert.equal(suggestPeople([kira, vanya], 'ки')[0].person.id, 'p1');
   assert.equal(suggestPeople([kira, vanya], 'k1')[0].nick.nick, 'k1ra');
   assert.deepEqual(suggestPeople([kira, vanya], 'ки', ['p1']), []);
+});
+
+test('on this day prefers the same date, then the same season', () => {
+  const day = onThisDay(stories, new Date(2025, 7, 12));
+  assert.equal(day.story.id, 's3');
+  assert.equal(day.years, 3);
+  assert.equal(day.kind, 'day');
+  const season = onThisDay(stories, new Date(2024, 3, 20));
+  assert.equal(season.story.id, 's1');
+  assert.equal(season.kind, 'season');
+  assert.equal(onThisDay(stories, new Date(2019, 3, 20)), null);
 });
 
 test('story cleanup trims input and limits images', () => {

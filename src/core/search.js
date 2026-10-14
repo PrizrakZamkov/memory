@@ -1,6 +1,6 @@
 // Filtering, searching, sorting and counting stories. Pure functions.
 import { fullName } from './model.js';
-import { sortKey, yearOf } from './dates.js';
+import { currentSeason, sortKey, yearOf } from './dates.js';
 
 export const EMPTY_FILTERS = { query: '', game: '', person: '', tag: '', year: '' };
 
@@ -107,6 +107,23 @@ export function knownStatuses(people, defaults) {
 
 export function knownGames(people, stories) {
   return countBy([...stories.map(s => s.game), ...people.flatMap(p => p.games)].filter(Boolean)).map(g => g.value);
+}
+
+// A story from past years for the "on this day" block: same day first, else same season.
+export function onThisDay(stories, today = new Date()) {
+  const year = today.getFullYear();
+  const monthDay = `${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  const sameDay = stories.filter(s => s.when?.kind === 'exact' && s.when.date.slice(5) === monthDay && Number(s.when.date.slice(0, 4)) < year);
+  if (sameDay.length) {
+    const story = sameDay.sort((a, b) => a.when.date.localeCompare(b.when.date))[0];
+    return { story, years: year - Number(story.when.date.slice(0, 4)), kind: 'day' };
+  }
+  const season = currentSeason(today);
+  const sameSeason = stories.filter(s => s.when?.kind === 'approx' && s.when.season === season && s.when.year < year);
+  if (!sameSeason.length) return null;
+  // Changes once a day, so the block does not jump around on every visit.
+  const story = sameSeason[(today.getDate() + today.getMonth() * 31) % sameSeason.length];
+  return { story, years: year - story.when.year, kind: 'season' };
 }
 
 export function knownTags(stories) {
