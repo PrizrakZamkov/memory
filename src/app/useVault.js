@@ -2,6 +2,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { askPersistentStorage, openDb } from '../core/db.js';
 import * as vault from '../core/vault.js';
+import { createRepo } from '../core/repo.js';
+import { restoreIntoNewVault } from '../core/backup.js';
+import { joinAccount } from '../core/sync.js';
 
 const ACTIVITY_EVENTS = ['pointerdown', 'keydown', 'wheel', 'touchstart'];
 
@@ -14,9 +17,13 @@ export function useVault() {
   const [recoveryText, setRecoveryText] = useState('');
   const [persisted, setPersisted] = useState(false);
 
+  // Grows every time the vault opens with a key, so the journal starts fresh.
+  const [openCount, setOpenCount] = useState(0);
+
   const open = useCallback(async (database, key) => {
     setDataKey(key);
     setSettings(await vault.getVaultSettings(database));
+    setOpenCount(n => n + 1);
     setStatus('open');
   }, []);
 
@@ -62,14 +69,38 @@ export function useVault() {
   }, [status, lockMinutes, lock]);
 
   return {
-    db, status, dataKey, settings, recoveryText, persisted,
+    db, status, dataKey, settings, recoveryText, persisted, openCount,
 
-    async create() {
+    async create(name = '') {
       const result = await vault.createVault(db);
+      if (name.trim()) await createRepo(db, result.dataKey).saveProfile({ name: name.trim().slice(0, 40) });
       setDataKey(result.dataKey);
       setRecoveryText(result.recoveryText);
       setSettings(await vault.getVaultSettings(db));
       setStatus('recovery');
+    },
+
+    // New device: the key came from another device or from the recovery key.
+    async createFromAccount(key, header, email) {
+      await joinAccount(db, null, key, header, email);
+      await open(db, key);
+    },
+
+    // This device already has a vault and joins an account with another key.
+    async adoptAccountKey(key, header, email) {
+      await joinAccount(db, dataKey, key, header, email);
+      await open(db, key);
+    },
+
+    async restoreFromBackup(backup, recoveryKeyText) {
+      const key = await vault.unlockHeader(backup.header, recoveryKeyText);
+      await restoreIntoNewVault(db, backup, key);
+      await open(db, key);
+    },
+
+    async markBackup() {
+      await vault.updateVaultSettings(db, { lastBackupAt: Date.now() });
+      setSettings(await vault.getVaultSettings(db));
     },
 
     async confirmRecovery(saved) {

@@ -1,10 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppContext } from './context.js';
-import { I18nContext, detectLanguage, makeT } from './i18n.js';
+import { I18nContext, detectLanguage, makeT, useI18n } from './i18n.js';
 import { go, useRoute } from './router.js';
 import { useVault } from './useVault.js';
 import { useData } from './useData.js';
+import { useSync } from './useSync.js';
 import { EMPTY_FILTERS } from '../core/search.js';
+import { createApi } from '../core/api.js';
+import { ApproveDialog } from '../ui/SyncSection.jsx';
 import { BottomNav, Header } from '../ui/Header.jsx';
 import { FeedPage } from '../ui/FeedPage.jsx';
 import { PeoplePage, PersonPage } from '../ui/PeoplePage.jsx';
@@ -13,7 +16,7 @@ import { StoryEditor } from '../ui/StoryEditor.jsx';
 import { PersonEditor } from '../ui/PersonEditor.jsx';
 import { ImageViewer } from '../ui/ImageViewer.jsx';
 import { Toast } from '../ui/common.jsx';
-import { ErrorScreen, RecoveryScreen, UnlockScreen, WelcomeScreen } from '../ui/VaultScreens.jsx';
+import { ConnectScreen, ErrorScreen, RecoveryScreen, UnlockScreen, WelcomeScreen } from '../ui/VaultScreens.jsx';
 
 function readSetting(key, fallback) {
   try {
@@ -55,21 +58,52 @@ export function App() {
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#161B24' : '#F2F5F9');
   }, [theme]);
 
+  // Result of the Google sign-in redirect: '/?login=ok' or '/?login=failed'.
+  const [login, setLogin] = useState(() => {
+    const value = new URLSearchParams(window.location.search).get('login');
+    if (value) window.history.replaceState(null, '', window.location.pathname + window.location.hash);
+    return value;
+  });
+  const clearLogin = useCallback(() => setLogin(null), []);
+
   let screen = null;
   if (vault.status === 'error') screen = <ErrorScreen onLang={toggleLang} />;
-  if (vault.status === 'new') screen = <WelcomeScreen onStart={vault.create} onLang={toggleLang} />;
+  if (vault.status === 'new' && login === 'ok') {
+    screen = (
+      <ConnectScreen
+        onLang={toggleLang}
+        onKey={async (key, header, email) => { await vault.createFromAccount(key, header, email); clearLogin(); }}
+        onStartFresh={() => vault.create()}
+        onCancel={async () => { await createApi().post('auth/logout').catch(() => {}); clearLogin(); }}
+      />
+    );
+  } else if (vault.status === 'new') {
+    screen = <WelcomeScreen onStart={vault.create} onRestore={vault.restoreFromBackup} onLang={toggleLang} loginFailed={login === 'failed'} />;
+  }
   if (vault.status === 'recovery') screen = <RecoveryScreen recoveryKey={vault.recoveryText} onDone={vault.confirmRecovery} onLang={toggleLang} />;
   if (vault.status === 'locked') screen = <UnlockScreen onPasscode={vault.unlockWithPasscode} onRecovery={vault.unlockWithRecovery} onLang={toggleLang} />;
   if (vault.status === 'open') {
-    screen = <Journal key={vault.db ? 'open' : 'none'} vault={vault} theme={theme} setTheme={setTheme} setLang={setLang} />;
+    screen = (
+      <Journal
+        key={vault.openCount} vault={vault} theme={theme} setTheme={setTheme} setLang={setLang}
+        login={login} clearLogin={clearLogin}
+      />
+    );
   }
 
   return <I18nContext.Provider value={i18n}>{screen}</I18nContext.Provider>;
 }
 
 // The open journal. Unmounts on lock, which drops decrypted data from memory.
-function Journal({ vault, theme, setTheme, setLang }) {
-  const data = useData(vault.db, vault.dataKey);
+function Journal({ vault, theme, setTheme, setLang, login, clearLogin }) {
+  const { t } = useI18n();
+  const hooks = useRef({});
+  const data = useData(vault.db, vault.dataKey, hooks);
+  const sync = useSync({
+    db: vault.db, dataKey: vault.dataKey, reload: data.reload,
+    loginPending: login === 'ok', clearLogin
+  });
+  hooks.current = { onChange: sync.schedule, fetchImage: sync.fetchImage, onImagesRemoved: sync.forgetImages };
   const route = useRoute();
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [sort, setSort] = useState('newest');
@@ -82,7 +116,7 @@ function Journal({ vault, theme, setTheme, setLang }) {
     openStory: (story = null, presetPerson = null) => setStoryDialog({ story, presetPerson }),
     openPerson: (person = null) => setPersonDialog({ person }),
     openViewer: (images, index) => setViewer({ images, index }),
-    toast: (message, undo = null) => setToast({ id: Date.now(), message, undo }),
+    toast: (message, undo = null, kind = '') => setToast({ id: Date.now(), message, undo, kind }),
     filterBy: patch => {
       setFilters({ ...EMPTY_FILTERS, ...patch });
       if (route.page !== 'feed') go('/feed');
@@ -116,7 +150,16 @@ function Journal({ vault, theme, setTheme, setLang }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [dialogOpen, ui]);
 
-  const app = { data, vault, ui, theme, setTheme, setLang };
+  // After a sign-in from the Data page, show that page again.
+  useEffect(() => {
+    if (login === 'failed') {
+      ui.toast(t('sync.loginFailed'));
+      clearLogin();
+    }
+    if (login) go('/data');
+  }, []);
+
+  const app = { data, vault, ui, sync, theme, setTheme, setLang };
   const setQuery = query => setFilters(current => ({ ...current, query }));
 
   let page;
@@ -134,6 +177,7 @@ function Journal({ vault, theme, setTheme, setLang }) {
       {storyDialog && <StoryEditor story={storyDialog.story} presetPerson={storyDialog.presetPerson} onClose={closeStory} />}
       {personDialog && <PersonEditor person={personDialog.person} onClose={closePerson} />}
       {viewer && <ImageViewer images={viewer.images} start={viewer.index} onClose={closeViewer} />}
+      {!dialogOpen && <ApproveDialog />}
       <Toast toast={toast} onClose={closeToast} />
     </AppContext.Provider>
   );

@@ -244,7 +244,105 @@ const ru = {
 
   'error.generic': 'Что-то пошло не так. Попробуй ещё раз.',
   'error.image': ({ name }) => `Не получилось открыть картинку ${name}.`,
-  'error.storage': 'Браузер не дал сохранить данные. Проверь, не открыт ли сайт в режиме инкогнито.'
+  'error.storage': 'Браузер не дал сохранить данные. Проверь, не открыт ли сайт в режиме инкогнито.',
+
+  'greet.morning': ({ name }) => (name ? `Доброе утро, ${name}` : 'Доброе утро'),
+  'greet.day': ({ name }) => (name ? `Добрый день, ${name}` : 'Добрый день'),
+  'greet.evening': ({ name }) => (name ? `Добрый вечер, ${name}` : 'Добрый вечер'),
+  'greet.night': ({ name }) => (name ? `Доброй ночи, ${name}` : 'Доброй ночи'),
+  'onThisDay.day': ({ years }) => `${years} ${pluralRu(years, 'год', 'года', 'лет')} назад в этот день`,
+  'onThisDay.season': ({ years }) => `${years} ${pluralRu(years, 'год', 'года', 'лет')} назад, в это же время года`,
+  'story.saved': 'История сохранена',
+  'person.saved': ({ name }) => `Сохранено: ${name}`,
+  'people.emptyHint': 'Добавь человека прямо из истории: начни вводить имя в поле «Кто был».',
+
+  'welcome.name': 'Как тебя зовут?',
+  'welcome.nameHint': 'Для приветствия. Можно пропустить.',
+  'welcome.haveAccount': 'Подтянуть записи с другого устройства',
+  'welcome.restore': 'Восстановить из бэкапа',
+
+  'data.profile': 'Профиль',
+  'data.name': 'Твоё имя',
+  'data.nameHint': 'Для приветствия на главной. Хранится зашифрованным.',
+  'data.nameSaved': 'Имя сохранено',
+
+  'backup.title': 'Бэкап',
+  'backup.text': 'Файл с зашифрованными записями и картинками. Открыть его можно только ключом восстановления, поэтому хранить его можно где угодно: на флешке, в облаке, в почте.',
+  'backup.last': ({ when }) => `Последний бэкап: ${when}`,
+  'backup.never': 'Бэкап ещё не делали.',
+  'backup.download': 'Скачать бэкап',
+  'backup.restore': 'Восстановить из файла',
+  'backup.done': 'Бэкап скачан',
+  'backup.reminder': ({ days }) => (days ? `Последний бэкап был ${days} ${pluralRu(days, 'день', 'дня', 'дней')} назад.` : 'Ты ещё ни разу не делал бэкап.'),
+  'backup.reminderText': 'Пока записи живут только в этом браузере. Скачай бэкап, чтобы они точно не потерялись.',
+  'backup.later': 'Позже',
+
+  'restore.title': 'Восстановление из бэкапа',
+  'restore.pick': 'Выбрать файл',
+  'restore.bad': 'Это не файл бэкапа Gamefolk, или он повреждён.',
+  'restore.summary': ({ people, stories, images }) => `В файле: ${people} ${pluralRu(people, 'человек', 'человека', 'человек')}, ${stories} ${pluralRu(stories, 'история', 'истории', 'историй')}, ${images} ${pluralRu(images, 'картинка', 'картинки', 'картинок')}.`,
+  'restore.needKey': 'Этот бэкап сделан в другом сейфе. Введи ключ восстановления, который был у этих записей.',
+  'restore.plan': ({ added, updated }) => `Добавится ${added}, обновится ${updated}. Ничего не удалится.`,
+  'restore.nothing': 'Всё из этого файла уже есть здесь.',
+  'restore.check': 'Проверить',
+  'restore.apply': 'Восстановить',
+  'restore.done': 'Восстановлено',
+  'restore.newText': 'Выбери файл .gamefolk и введи ключ восстановления этих записей.',
+
+  'export.title': 'Выгрузить всё',
+  'export.text': 'Zip-архив, который откроется и без Gamefolk: книга воспоминаний для любого браузера, данные в JSON, каждая история отдельным текстовым файлом и все картинки.',
+  'export.warning': 'Архив не зашифрован: прочитать его сможет любой, у кого он окажется.',
+  'export.download': 'Скачать архив',
+  'export.preparing': 'Собираю архив',
+  'export.bookTitle': 'Мои истории',
+
+  'sync.title': 'Синхронизация',
+  'sync.text': 'Записи будут на всех твоих устройствах. На сервер уходит только шифр: прочитать истории там нельзя.',
+  'sync.fileMode': 'Синхронизация работает, когда сайт открыт по адресу в интернете, а не из файла.',
+  'sync.login': 'Войти через Google',
+  'sync.account': ({ email }) => `Аккаунт: ${email}`,
+  'sync.last': ({ when }) => `Синхронизировано ${when}`,
+  'sync.never': 'Ещё не синхронизировано',
+  'sync.now': 'Синхронизировать',
+  'sync.syncing': 'Синхронизирую',
+  'sync.offline': 'Нет связи с сервером. Изменения сохранятся здесь и уйдут позже.',
+  'sync.error': 'Не получилось синхронизировать. Попробую ещё раз чуть позже.',
+  'sync.loggedOut': 'Вход истёк. Войди снова, чтобы продолжить синхронизацию.',
+  'sync.loginFailed': 'Не получилось войти через Google. Попробуй ещё раз.',
+  'sync.devices': 'Устройства',
+  'sync.thisDevice': 'это устройство',
+  'sync.seen': ({ when }) => `был онлайн ${when}`,
+  'sync.removeDevice': 'Отключить',
+  'sync.logout': 'Выйти',
+  'sync.logoutAll': 'Выйти везде',
+  'sync.deleteServer': 'Удалить данные с сервера',
+  'sync.deleteText': 'Удалит аккаунт и все зашифрованные копии с сервера. Записи на этом устройстве останутся.',
+  'sync.deleted': 'Данные на сервере удалены',
+  'sync.connected': 'Синхронизация включена',
+
+  'join.title': 'Подключи это устройство',
+  'join.text': 'В аккаунте уже есть записи с другого устройства. Чтобы открыть их здесь, нужен ключ.',
+  'join.merge': 'Записи, которые уже есть на этом устройстве, сохранятся и попадут в аккаунт.',
+  'join.pairTitle': 'Подтверди с другого устройства',
+  'join.pairText': 'Открой Gamefolk там, где уже есть записи. Появится запрос: проверь, что код такой же, и подтверди.',
+  'join.waiting': 'Жду подтверждения',
+  'join.rejected': 'Запрос отклонили.',
+  'join.expired': 'Время вышло.',
+  'join.retry': 'Попробовать ещё раз',
+  'join.recoveryTitle': 'Или войди по ключу восстановления',
+  'join.useRecovery': 'Открыть по ключу',
+  'join.done': 'Устройство подключено',
+  'join.emptyTitle': 'Аккаунт пока пустой',
+  'join.emptyText': 'В этом аккаунте ещё нет записей. Начни здесь, и они появятся на всех устройствах.',
+  'join.checking': 'Проверяю аккаунт',
+
+  'approve.title': 'Новое устройство',
+  'approve.text': ({ name }) => `${name || 'Устройство'} просит доступ к твоим записям.`,
+  'approve.check': 'Подтверждай, только если ты сам сейчас подключаешь своё устройство и на нём такой же код:',
+  'approve.ok': 'Код совпадает',
+  'approve.no': 'Отклонить',
+
+  'time.justNow': 'только что'
 };
 
 const en = {
@@ -479,8 +577,126 @@ const en = {
 
   'error.generic': 'Something went wrong. Please try again.',
   'error.image': ({ name }) => `Could not open image ${name}.`,
-  'error.storage': 'The browser refused to save data. Check that the site is not open in a private window.'
+  'error.storage': 'The browser refused to save data. Check that the site is not open in a private window.',
+
+  'greet.morning': ({ name }) => (name ? `Good morning, ${name}` : 'Good morning'),
+  'greet.day': ({ name }) => (name ? `Good afternoon, ${name}` : 'Good afternoon'),
+  'greet.evening': ({ name }) => (name ? `Good evening, ${name}` : 'Good evening'),
+  'greet.night': ({ name }) => (name ? `Good night, ${name}` : 'Good night'),
+  'onThisDay.day': ({ years }) => `${years} ${pluralEn(years, 'year', 'years')} ago today`,
+  'onThisDay.season': ({ years }) => `${years} ${pluralEn(years, 'year', 'years')} ago, this time of year`,
+  'story.saved': 'Story saved',
+  'person.saved': ({ name }) => `Saved: ${name}`,
+  'people.emptyHint': 'You can add people right from a story: start typing a name in "Who was there".',
+
+  'welcome.name': 'What is your name?',
+  'welcome.nameHint': 'For the greeting. You can skip it.',
+  'welcome.haveAccount': 'Bring records from another device',
+  'welcome.restore': 'Restore from backup',
+
+  'data.profile': 'Profile',
+  'data.name': 'Your name',
+  'data.nameHint': 'Used for the greeting. Stored encrypted.',
+  'data.nameSaved': 'Name saved',
+
+  'backup.title': 'Backup',
+  'backup.text': 'A file with your encrypted records and images. Only the recovery key opens it, so you can keep it anywhere: a USB stick, cloud storage, email.',
+  'backup.last': ({ when }) => `Last backup: ${when}`,
+  'backup.never': 'No backup yet.',
+  'backup.download': 'Download backup',
+  'backup.restore': 'Restore from file',
+  'backup.done': 'Backup downloaded',
+  'backup.reminder': ({ days }) => (days ? `Your last backup was ${days} ${pluralEn(days, 'day', 'days')} ago.` : 'You have not made a backup yet.'),
+  'backup.reminderText': 'For now your records live only in this browser. Download a backup so they are never lost.',
+  'backup.later': 'Later',
+
+  'restore.title': 'Restore from backup',
+  'restore.pick': 'Choose file',
+  'restore.bad': 'This is not a Gamefolk backup, or the file is damaged.',
+  'restore.summary': ({ people, stories, images }) => `In the file: ${people} ${pluralEn(people, 'person', 'people')}, ${stories} ${pluralEn(stories, 'story', 'stories')}, ${images} ${pluralEn(images, 'image', 'images')}.`,
+  'restore.needKey': 'This backup comes from another vault. Enter the recovery key of those records.',
+  'restore.plan': ({ added, updated }) => `${added} will be added, ${updated} updated. Nothing will be deleted.`,
+  'restore.nothing': 'Everything from this file is already here.',
+  'restore.check': 'Check',
+  'restore.apply': 'Restore',
+  'restore.done': 'Restored',
+  'restore.newText': 'Choose a .gamefolk file and enter the recovery key of those records.',
+
+  'export.title': 'Export everything',
+  'export.text': 'A zip archive that opens without Gamefolk: a memory book for any browser, data as JSON, every story as a text file, and all images.',
+  'export.warning': 'The archive is not encrypted: anyone who gets it can read it.',
+  'export.download': 'Download archive',
+  'export.preparing': 'Preparing archive',
+  'export.bookTitle': 'My stories',
+
+  'sync.title': 'Sync',
+  'sync.text': 'Your records on all your devices. Only ciphertext goes to the server: nobody can read your stories there.',
+  'sync.fileMode': 'Sync works when the site is opened from its web address, not from a file.',
+  'sync.login': 'Sign in with Google',
+  'sync.account': ({ email }) => `Account: ${email}`,
+  'sync.last': ({ when }) => `Synced ${when}`,
+  'sync.never': 'Not synced yet',
+  'sync.now': 'Sync now',
+  'sync.syncing': 'Syncing',
+  'sync.offline': 'No connection to the server. Changes stay here and will go out later.',
+  'sync.error': 'Sync failed. Will try again shortly.',
+  'sync.loggedOut': 'Your sign-in expired. Sign in again to keep syncing.',
+  'sync.loginFailed': 'Could not sign in with Google. Please try again.',
+  'sync.devices': 'Devices',
+  'sync.thisDevice': 'this device',
+  'sync.seen': ({ when }) => `last seen ${when}`,
+  'sync.removeDevice': 'Sign out',
+  'sync.logout': 'Sign out',
+  'sync.logoutAll': 'Sign out everywhere',
+  'sync.deleteServer': 'Delete data from server',
+  'sync.deleteText': 'Deletes the account and all encrypted copies from the server. Records on this device stay.',
+  'sync.deleted': 'Server data deleted',
+  'sync.connected': 'Sync is on',
+
+  'join.title': 'Connect this device',
+  'join.text': 'This account already has records from another device. To open them here, this device needs the key.',
+  'join.merge': 'Records already on this device are kept and added to the account.',
+  'join.pairTitle': 'Approve from another device',
+  'join.pairText': 'Open Gamefolk where your records already are. A request will appear: check that the code matches and approve.',
+  'join.waiting': 'Waiting for approval',
+  'join.rejected': 'The request was declined.',
+  'join.expired': 'Time ran out.',
+  'join.retry': 'Try again',
+  'join.recoveryTitle': 'Or use your recovery key',
+  'join.useRecovery': 'Open with key',
+  'join.done': 'Device connected',
+  'join.emptyTitle': 'The account is empty',
+  'join.emptyText': 'There are no records in this account yet. Start here and they will appear on all your devices.',
+  'join.checking': 'Checking the account',
+
+  'approve.title': 'New device',
+  'approve.text': ({ name }) => `${name || 'A device'} asks for access to your records.`,
+  'approve.check': 'Approve only if you are connecting your own device right now and it shows the same code:',
+  'approve.ok': 'The code matches',
+  'approve.no': 'Decline',
+
+  'time.justNow': 'just now'
 };
+
+export function timeAgo(ms, lang, t) {
+  const diff = ms - Date.now();
+  const abs = Math.abs(diff);
+  if (abs < 60000) return t('time.justNow');
+  const rtf = new Intl.RelativeTimeFormat(lang === 'ru' ? 'ru' : 'en', { numeric: 'auto' });
+  const steps = [['minute', 60000], ['hour', 3600000], ['day', 86400000], ['month', 2592000000], ['year', 31536000000]];
+  let unit = steps[0];
+  for (const step of steps) if (abs >= step[1]) unit = step;
+  return rtf.format(Math.round(diff / unit[1]), unit[0]);
+}
+
+export function greetingKey(date = new Date()) {
+  const hour = date.getHours();
+  if (hour < 5) return 'greet.night';
+  if (hour < 12) return 'greet.morning';
+  if (hour < 18) return 'greet.day';
+  if (hour < 23) return 'greet.evening';
+  return 'greet.night';
+}
 
 const dictionaries = { ru, en };
 

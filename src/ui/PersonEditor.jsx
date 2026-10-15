@@ -3,7 +3,7 @@ import { Icon } from './Icon.jsx';
 import { Avatar, ChipInput, Modal, WhenField } from './common.jsx';
 import { useI18n } from '../app/i18n.js';
 import { useApp } from '../app/context.js';
-import { emptyPerson } from '../core/model.js';
+import { emptyPerson, fullName } from '../core/model.js';
 import { knownGames, knownStatuses } from '../core/search.js';
 import { go } from '../app/router.js';
 
@@ -42,6 +42,7 @@ export function PersonEditor({ person, onClose }) {
       const saved = await data.savePerson(form);
       onClose();
       if (isNew) go(`/people/${saved.id}`);
+      ui.toast(t('person.saved', { name: fullName(saved) }), null, 'success');
     } catch {
       setError(t('error.storage'));
       setBusy(false);

@@ -27,6 +27,8 @@
   --accent-text: #9dd0ff;
   --on-accent: #0b2440;
   --accent-soft: #26405f;
+  --star: #f5c451;
+  --warm: #f0a67a;
   --danger: #ff8f8f;
   --warning: #ffd27a;
   --backdrop: rgba(6, 9, 14, 0.66);
@@ -46,6 +48,8 @@
   --accent-text: #1a56ae;
   --on-accent: #ffffff;
   --accent-soft: #dae7fa;
+  --star: #d39a12;
+  --warm: #d9774a;
   --danger: #c22f2f;
   --warning: #8a5a00;
   --backdrop: rgba(19, 25, 34, 0.42);
@@ -55,11 +59,12 @@
 :root {
   --font-head: 'Exo 2', 'Segoe UI', system-ui, sans-serif;
   --font-body: 'Onest', 'Segoe UI', system-ui, sans-serif;
-  --radius: 14px;
-  --radius-sm: 10px;
-  --fast: 120ms;
-  --base: 200ms;
+  --radius: 16px;
+  --radius-sm: 11px;
+  --fast: 140ms;
+  --base: 240ms;
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --spring: cubic-bezier(0.34, 1.4, 0.64, 1);
   --header-h: 68px;
   --bottom-h: 68px;
 }

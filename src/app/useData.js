@@ -15,14 +15,23 @@ const upsert = (list, item) => {
 
 const without = (list, id) => list.filter(x => x.id !== id);
 
-export function useData(db, dataKey) {
-  const repo = useMemo(() => createRepo(db, dataKey), [db, dataKey]);
+// hooks is a ref with optional callbacks from sync: onChange, fetchImage(id), onImagesRemoved(ids).
+export function useData(db, dataKey, hooks = { current: {} }) {
+  const repo = useMemo(() => createRepo(db, dataKey, () => hooks.current.onChange?.()), [db, dataKey]);
   const [people, setPeople] = useState([]);
   const [stories, setStories] = useState([]);
+  const [profile, setProfile] = useState({});
   const [loaded, setLoaded] = useState(false);
   const latest = useRef({ people, stories });
   latest.current = { people, stories };
   const imageUrls = useRef(new Map());
+
+  const reload = useCallback(async () => {
+    const all = await repo.loadAll();
+    setPeople(all.people);
+    setStories(all.stories);
+    return all;
+  }, [repo]);
 
   useEffect(() => {
     let alive = true;
@@ -31,9 +40,11 @@ export function useData(db, dataKey) {
       if (!alive) return;
       setPeople(all.people);
       setStories(all.stories);
+      setProfile(await repo.loadProfile());
       setLoaded(true);
       const draft = await repo.loadDraft();
-      repo.removeUnusedImages(all.people, all.stories, draft).catch(() => {});
+      const removed = await repo.removeUnusedImages(all.people, all.stories, draft).catch(() => []);
+      if (removed.length) hooks.current.onImagesRemoved?.(removed);
     })();
     const urls = imageUrls.current;
     return () => {
@@ -104,15 +115,33 @@ export function useData(db, dataKey) {
     return id;
   }, [repo]);
 
+  // Loads an image, downloading it from the sync server if this device does not have it yet.
+  const loadImage = useCallback(async id => {
+    let image = await repo.loadImage(id);
+    if (!image && hooks.current.fetchImage) {
+      await hooks.current.fetchImage(id);
+      image = await repo.loadImage(id);
+    }
+    return image;
+  }, [repo]);
+
   // Decrypts an image once and keeps an object URL until the vault closes.
   const imageUrl = useCallback(id => {
     const cache = imageUrls.current;
     if (!cache.has(id)) {
-      cache.set(id, repo.loadImage(id)
+      const promise = loadImage(id)
         .then(image => (image ? URL.createObjectURL(new Blob([image.bytes], { type: image.type })) : null))
-        .catch(() => null));
+        .catch(() => null);
+      // A failed download may work later, so it is not cached.
+      promise.then(url => { if (!url) cache.delete(id); });
+      cache.set(id, promise);
     }
     return cache.get(id);
+  }, [loadImage]);
+
+  const saveProfile = useCallback(async next => {
+    await repo.saveProfile(next);
+    setProfile(next);
   }, [repo]);
 
   const addSample = useCallback(async lang => {
@@ -124,10 +153,10 @@ export function useData(db, dataKey) {
   }, [repo]);
 
   return {
-    loaded, people, stories, peopleById,
+    loaded, people, stories, peopleById, profile, reload, saveProfile, repo,
     saveStory, savePerson, deleteStory, deletePerson,
     toggleStar: story => saveStory({ ...story, starred: !story.starred }),
-    addStoryImages, addPhoto, imageUrl, addSample,
+    addStoryImages, addPhoto, imageUrl, loadImage, addSample,
     loadDraft: () => repo.loadDraft(),
     saveDraft: draft => repo.saveDraft(draft),
     clearDraft: () => repo.clearDraft()

@@ -5,17 +5,33 @@ import { useI18n } from '../app/i18n.js';
 import { useApp } from '../app/context.js';
 import { go } from '../app/router.js';
 import { formatWhen } from '../core/dates.js';
+import { haptic } from './motion.js';
 
 const isLong = text => text.length > 280 || text.split('\n').length > 4;
 
-export function StoryCard({ story }) {
+// Only the first cards get their own transition name: enough for a smooth reorder, cheap to animate.
+const NAMED_CARDS = 24;
+
+export function StoryCard({ story, index = 0, transitionName = true }) {
   const { t, lang } = useI18n();
   const { data, ui } = useApp();
   const [open, setOpen] = useState(false);
+  const [burst, setBurst] = useState(0);
   const people = story.people.map(id => data.peopleById.get(id)).filter(Boolean);
 
+  const toggleStar = () => {
+    if (!story.starred) {
+      setBurst(Date.now());
+      haptic();
+    }
+    data.toggleStar(story);
+  };
+
+  const style = { animationDelay: `${Math.min(index, 8) * 45}ms` };
+  if (transitionName && index < NAMED_CARDS) style.viewTransitionName = `story-${story.id}`;
+
   return (
-    <article className="card story">
+    <article className="card story" style={style}>
       <div className="story-top">
         <div className="who">
           {people.map(person => (
@@ -28,9 +44,14 @@ export function StoryCard({ story }) {
         <button
           type="button" className="star-btn" aria-pressed={story.starred}
           aria-label={story.starred ? t('story.unstar') : t('story.star')}
-          onClick={() => data.toggleStar(story)}
+          onClick={toggleStar}
         >
           <Icon name="star" size={20} filled={story.starred} strokeWidth={1.8} />
+          {burst > 0 && (
+            <span className="burst" key={burst} aria-hidden="true">
+              {[0, 1, 2, 3, 4, 5].map(i => <i key={i} style={{ '--a': `${i * 60}deg` }} />)}
+            </span>
+          )}
         </button>
       </div>
 

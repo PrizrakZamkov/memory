@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { Icon } from './Icon.jsx';
 import { Avatar, copyText, EmptyState } from './common.jsx';
 import { StoryCard } from './StoryCard.jsx';
+import { Party } from './Illustrations.jsx';
 import { useI18n } from '../app/i18n.js';
 import { useApp } from '../app/context.js';
 import { fullName } from '../core/model.js';
@@ -45,8 +46,8 @@ export function PeoplePage() {
       )}
 
       <div className="people-grid">
-        {list.map(person => (
-          <a key={person.id} href={`#/people/${person.id}`} className="card person-card">
+        {list.map((person, index) => (
+          <a key={person.id} href={`#/people/${person.id}`} className="card person-card" style={{ animationDelay: `${Math.min(index, 10) * 35}ms` }}>
             <Avatar person={person} size={52} />
             <span className="person-card-body">
               <span className="person-name">{fullName(person)}</span>
@@ -60,7 +61,8 @@ export function PeoplePage() {
 
       {data.people.length === 0 && (
         <EmptyState
-          title={t('people.emptyTitle')} text={t('people.emptyText')}
+          picture={<Party />}
+          title={t('people.emptyTitle')} text={`${t('people.emptyText')} ${t('people.emptyHint')}`}
           action={<button type="button" className="btn btn-primary" onClick={() => ui.openPerson()}>{t('people.add')}</button>}
         />
       )}

@@ -2,21 +2,29 @@ import { useMemo, useState } from 'react';
 import { Icon } from './Icon.jsx';
 import { Avatar, EmptyState, Modal } from './common.jsx';
 import { StoryCard } from './StoryCard.jsx';
-import { useI18n } from '../app/i18n.js';
+import { Campfire, Lens, StarSky } from './Illustrations.jsx';
+import { useBackupDownload } from './BackupSection.jsx';
+import { smoothly, useCountUp } from './motion.js';
+import { greetingKey, useI18n } from '../app/i18n.js';
 import { useApp } from '../app/context.js';
 import { fullName } from '../core/model.js';
-import { EMPTY_FILTERS, facets, filterStories, sortStories } from '../core/search.js';
+import { EMPTY_FILTERS, facets, filterStories, onThisDay, sortStories } from '../core/search.js';
 
 const PEOPLE_IN_PANEL = 10;
 
-export function FeedPage({ starredOnly, filters, setFilters, sort, setSort }) {
+export function FeedPage({ starredOnly, filters, setFilters: applyFilters, sort, setSort: applySort }) {
   const { t, lang } = useI18n();
   const { data, ui } = useApp();
   const [sheetOpen, setSheetOpen] = useState(false);
+  // Filter and sort changes rearrange the cards smoothly; typing in search stays instant.
+  const setFilters = next => (next.query === filters.query ? smoothly(() => applyFilters(next)) : applyFilters(next));
+  const setSort = next => smoothly(() => applySort(next));
 
   const base = useMemo(() => (starredOnly ? data.stories.filter(s => s.starred) : data.stories), [data.stories, starredOnly]);
   const counts = useMemo(() => facets(base), [base]);
   const list = useMemo(() => sortStories(filterStories(base, filters, data.peopleById), sort), [base, filters, sort, data.peopleById]);
+  const untouched = !filters.query && !filters.game && !filters.person && !filters.tag && !filters.year;
+  const memory = useMemo(() => (!starredOnly && untouched ? onThisDay(data.stories) : null), [data.stories, starredOnly, untouched]);
 
   const active = [
     filters.game && { key: 'game', label: filters.game },
@@ -26,10 +34,10 @@ export function FeedPage({ starredOnly, filters, setFilters, sort, setSort }) {
   ].filter(Boolean);
 
   const stats = t('feed.stats', {
-    stories: data.stories.length,
-    people: data.people.length,
-    games: new Set(data.stories.map(s => s.game).filter(Boolean)).size,
-    starred: data.stories.filter(s => s.starred).length
+    stories: useCountUp(data.stories.length),
+    people: useCountUp(data.people.length),
+    games: useCountUp(new Set(data.stories.map(s => s.game).filter(Boolean)).size),
+    starred: useCountUp(data.stories.filter(s => s.starred).length)
   });
 
   const panel = <FilterPanel counts={counts} filters={filters} setFilters={setFilters} />;
@@ -41,6 +49,7 @@ export function FeedPage({ starredOnly, filters, setFilters, sort, setSort }) {
       <section className="feed-main">
         <div className="page-head">
           <div>
+            {!starredOnly && <p className="greeting">{t(greetingKey(), { name: data.profile.name })}</p>}
             <h1>{starredOnly ? t('starred.title') : t('feed.title')}</h1>
             {data.stories.length > 0 && <p className="sub">{stats}</p>}
           </div>
@@ -83,10 +92,24 @@ export function FeedPage({ starredOnly, filters, setFilters, sort, setSort }) {
           </div>
         )}
 
-        {list.length > 0 && <div className="story-list">{list.map(story => <StoryCard key={story.id} story={story} />)}</div>}
+        {!starredOnly && <BackupReminder />}
+
+        {memory && (
+          <section className="memory" aria-label={t(`onThisDay.${memory.kind}`, { years: memory.years })}>
+            <p className="memory-label"><Icon name="star" size={16} filled />{t(`onThisDay.${memory.kind}`, { years: memory.years })}</p>
+            <StoryCard story={memory.story} transitionName={false} />
+          </section>
+        )}
+
+        {list.length > 0 && (
+          <div className="story-list">
+            {list.map((story, index) => <StoryCard key={story.id} story={story} index={index} />)}
+          </div>
+        )}
 
         {data.stories.length === 0 && (
           <EmptyState
+            picture={<Campfire />}
             title={t('feed.emptyTitle')}
             text={t('feed.emptyText')}
             action={(
@@ -97,9 +120,9 @@ export function FeedPage({ starredOnly, filters, setFilters, sort, setSort }) {
             )}
           />
         )}
-        {data.stories.length > 0 && list.length === 0 && (
-          <EmptyState text={starredOnly && base.length === 0 ? t('starred.empty') : t('feed.noResults')} />
-        )}
+        {data.stories.length > 0 && list.length === 0 && (starredOnly && base.length === 0
+          ? <EmptyState picture={<StarSky />} text={t('starred.empty')} />
+          : <EmptyState picture={<Lens />} text={t('feed.noResults')} />)}
       </section>
 
       {sheetOpen && (
@@ -110,6 +133,48 @@ export function FeedPage({ starredOnly, filters, setFilters, sort, setSort }) {
           {panel}
         </Modal>
       )}
+    </div>
+  );
+}
+
+const SNOOZE_KEY = 'gamefolk.backupSnooze';
+const REMIND_AFTER_DAYS = 7;
+
+function BackupReminder() {
+  const { t } = useI18n();
+  const { data, vault, sync } = useApp();
+  const download = useBackupDownload();
+  const [snoozed, setSnoozed] = useState(() => {
+    try {
+      return Number(localStorage.getItem(SNOOZE_KEY) || 0) > Date.now();
+    } catch {
+      return false;
+    }
+  });
+  const last = vault.settings?.lastBackupAt;
+  const days = last ? Math.floor((Date.now() - last) / 86400000) : 0;
+  if (snoozed || sync.account || data.stories.length === 0 || (last && days < REMIND_AFTER_DAYS)) return null;
+
+  const later = () => {
+    try {
+      localStorage.setItem(SNOOZE_KEY, String(Date.now() + 3 * 86400000));
+    } catch {
+      // Not critical.
+    }
+    setSnoozed(true);
+  };
+
+  return (
+    <div className="reminder" role="status">
+      <Icon name="download" size={20} />
+      <div className="grow">
+        <p className="reminder-title">{t('backup.reminder', { days })}</p>
+        <p className="muted small">{t('backup.reminderText')}</p>
+      </div>
+      <div className="row-actions">
+        <button type="button" className="btn btn-primary" onClick={download}>{t('backup.download')}</button>
+        <button type="button" className="btn" onClick={later}>{t('backup.later')}</button>
+      </div>
     </div>
   );
 }

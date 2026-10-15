@@ -87,6 +87,7 @@ export function Toast({ toast, onClose }) {
   if (!toast) return null;
   return (
     <div className="toast" role="status" key={toast.id}>
+      {toast.kind === 'success' && <span className="toast-check"><Icon name="check" size={16} strokeWidth={2.6} /></span>}
       <span>{toast.message}</span>
       {toast.undo && (
         <button type="button" onClick={() => { toast.undo(); onClose(); }}>{t('action.undo')}</button>
@@ -203,9 +204,10 @@ export function PersonChip({ person, onClick }) {
   return <button type="button" className="person-chip" onClick={onClick}>{content}</button>;
 }
 
-export function EmptyState({ title, text, action }) {
+export function EmptyState({ title, text, action, picture }) {
   return (
     <div className="empty">
+      {picture}
       {title && <h2>{title}</h2>}
       {text && <p>{text}</p>}
       {action}
@@ -213,13 +215,19 @@ export function EmptyState({ title, text, action }) {
   );
 }
 
-export function downloadText(filename, text) {
-  const url = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }));
+export function downloadBlob(filename, blob) {
+  const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
   link.download = filename;
+  document.body.appendChild(link);
   link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+
+export function downloadText(filename, text) {
+  downloadBlob(filename, new Blob([text], { type: 'text/plain;charset=utf-8' }));
 }
 
 export async function copyText(text) {

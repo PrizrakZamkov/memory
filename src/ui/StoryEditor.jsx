@@ -6,6 +6,7 @@ import { useApp } from '../app/context.js';
 import { emptyStory, fullName, MAX_IMAGES, MAX_RANDOM_PLAYERS } from '../core/model.js';
 import { knownGames, knownTags, suggestPeople } from '../core/search.js';
 import { todayIso } from '../core/dates.js';
+import { haptic } from './motion.js';
 
 const hasContent = form =>
   Boolean(form.title.trim() || form.text.trim() || form.people.length || form.names.length || form.images.length);
@@ -98,6 +99,8 @@ export function StoryEditor({ story, presetPerson, onClose }) {
       await data.saveStory({ ...form, title });
       if (usesDraft) await data.clearDraft();
       onClose();
+      haptic();
+      ui.toast(t('story.saved'), null, 'success');
     } catch {
       setError(t('error.storage'));
       setBusy(false);

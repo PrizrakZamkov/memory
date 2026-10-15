@@ -4,6 +4,8 @@ import { copyText, downloadText, Modal } from './common.jsx';
 import { useI18n } from '../app/i18n.js';
 import { useApp } from '../app/context.js';
 import { MIN_PASSCODE_LENGTH } from '../core/vault.js';
+import { SyncSection } from './SyncSection.jsx';
+import { BackupSection } from './BackupSection.jsx';
 
 const LOCK_OPTIONS = [5, 15, 30, 60];
 
@@ -16,6 +18,10 @@ export function DataPage() {
   return (
     <div className="page narrow">
       <div className="page-head"><h1>{t('data.title')}</h1></div>
+
+      <ProfileSection />
+      <SyncSection />
+      <BackupSection />
 
       <section className="card settings-card">
         <h2>{t('data.vault')}</h2>
@@ -84,6 +90,33 @@ export function DataPage() {
       {dialog === 'recovery' && <RecoveryDialog onClose={() => setDialog(null)} />}
       {dialog === 'wipe' && <WipeDialog onClose={() => setDialog(null)} />}
     </div>
+  );
+}
+
+function ProfileSection() {
+  const { t } = useI18n();
+  const { data, ui } = useApp();
+  const [name, setName] = useState(data.profile.name || '');
+  const changed = name.trim() !== (data.profile.name || '');
+  return (
+    <section className="card settings-card">
+      <h2>{t('data.profile')}</h2>
+      <form
+        className="setting profile-row"
+        onSubmit={async event => {
+          event.preventDefault();
+          await data.saveProfile({ ...data.profile, name: name.trim().slice(0, 40) });
+          ui.toast(t('data.nameSaved'), null, 'success');
+        }}
+      >
+        <div className="field grow">
+          <label htmlFor="profile-name">{t('data.name')}</label>
+          <input id="profile-name" value={name} maxLength={40} onChange={e => setName(e.target.value)} />
+          <p className="hint">{t('data.nameHint')}</p>
+        </div>
+        <button type="submit" className="btn" disabled={!changed}>{t('action.save')}</button>
+      </form>
+    </section>
   );
 }
 
