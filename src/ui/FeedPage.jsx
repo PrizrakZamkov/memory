@@ -22,6 +22,8 @@ export function FeedPage({ starredOnly, filters, setFilters: applyFilters, sort,
 
   const base = useMemo(() => (starredOnly ? data.stories.filter(s => s.starred) : data.stories), [data.stories, starredOnly]);
   const counts = useMemo(() => facets(base), [base]);
+  // Nothing to filter yet: no side panel, the empty picture sits in the middle.
+  const empty = base.length === 0;
   const list = useMemo(() => sortStories(filterStories(base, filters, data.peopleById), sort), [base, filters, sort, data.peopleById]);
   const untouched = !filters.query && !filters.game && !filters.person && !filters.tag && !filters.year;
   const memory = useMemo(() => (!starredOnly && untouched ? onThisDay(data.stories) : null), [data.stories, starredOnly, untouched]);
@@ -43,8 +45,8 @@ export function FeedPage({ starredOnly, filters, setFilters: applyFilters, sort,
   const panel = <FilterPanel counts={counts} filters={filters} setFilters={setFilters} />;
 
   return (
-    <div className="feed-layout">
-      <aside className="filters desktop-only" aria-label={t('filters.title')}>{panel}</aside>
+    <div className={empty ? 'feed-layout is-empty' : 'feed-layout'}>
+      {!empty && <aside className="filters desktop-only" aria-label={t('filters.title')}>{panel}</aside>}
 
       <section className="feed-main">
         <div className="page-head">
@@ -53,17 +55,17 @@ export function FeedPage({ starredOnly, filters, setFilters: applyFilters, sort,
             <h1>{starredOnly ? t('starred.title') : t('feed.title')}</h1>
             {data.stories.length > 0 && <p className="sub">{stats}</p>}
           </div>
-          <label className="sort">
+          {!empty && <label className="sort">
             <span>{t('sort.label')}</span>
             <select value={sort} onChange={event => setSort(event.target.value)}>
               <option value="newest">{t('sort.newest')}</option>
               <option value="oldest">{t('sort.oldest')}</option>
               <option value="starred">{t('sort.starred')}</option>
             </select>
-          </label>
+          </label>}
         </div>
 
-        <div className="mobile-tools mobile-only">
+        {!empty && <div className="mobile-tools mobile-only">
           <label className="search">
             <Icon name="search" size={16} />
             <span className="sr-only">{t('header.search')}</span>
@@ -75,7 +77,7 @@ export function FeedPage({ starredOnly, filters, setFilters: applyFilters, sort,
           <button type="button" className="btn" onClick={() => setSheetOpen(true)}>
             <Icon name="filter" size={16} />{t('filters.open', { count: active.length })}
           </button>
-        </div>
+        </div>}
 
         {active.length > 0 && (
           <div className="active-filters">

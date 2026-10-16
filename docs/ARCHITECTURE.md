@@ -106,7 +106,7 @@ One handler, `server/handler.js`, deployed as two Netlify Functions with differe
 
 ## Sync loop
 
-`syncOnce`: list server etags, fetch changed records, keep the newer `t`, upload images not yet pushed, upload changed rows; on a conflict, pull again. Runs on open, 2.5 s after a local change, every 45 s while the tab is visible, on focus and when the network returns. Pairing requests are checked every 15 s. Images are downloaded only when shown.
+`syncOnce`: list server etags, fetch changed records, keep the newer `t`, upload images not yet pushed, upload changed rows; on a conflict, pull again. Runs on open, 2.5 s after a local change, every 45 s while the tab is visible, on focus and when the network returns. Pairing requests are checked every 15 s. Images are downloaded only when shown. When the app is opened as a file there is no server, so the sync section is hidden.
 
 ## Page security
 

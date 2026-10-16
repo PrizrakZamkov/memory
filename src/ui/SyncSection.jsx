@@ -18,15 +18,8 @@ export function SyncSection() {
   const loadDevices = () => sync.devices().then(setDevices).catch(() => {});
   useEffect(() => { if (signedIn && sync.status !== 'logged-out') loadDevices(); }, [signedIn, sync.status]);
 
-  if (!sync.available) {
-    return (
-      <section className="card settings-card">
-        <h2>{t('sync.title')}</h2>
-        <p className="muted">{t('sync.text')}</p>
-        <p className="muted">{t('sync.fileMode')}</p>
-      </section>
-    );
-  }
+  // Opened as a file: there is no server to talk to, so no sync section at all.
+  if (!sync.available) return null;
 
   if (sync.status === 'needs-key' && sync.join) {
     return (

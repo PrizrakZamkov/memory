@@ -58,7 +58,6 @@
 }
 
 .page {
-  max-width: 1120px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -87,8 +86,6 @@
   display: flex;
   gap: 32px;
   align-items: flex-start;
-  max-width: 1080px;
-  margin: 0 auto;
 }
 
 .filters {
@@ -106,7 +103,10 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  max-width: 800px;
+}
+
+.feed-layout.is-empty .feed-main .empty {
+  padding-top: 64px;
 }
 
 .story-list {

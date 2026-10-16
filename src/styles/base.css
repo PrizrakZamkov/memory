@@ -6,6 +6,9 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  /* Keep room for the scrollbar so pages do not jump when it appears. */
+  scrollbar-gutter: stable;
+  scrollbar-color: var(--line) var(--bg);
   background: var(--bg);
 }
 

@@ -1009,22 +1009,27 @@ button.person-chip:hover { background: var(--accent-soft); }
 /* Toast */
 .toast {
   position: fixed;
-  left: 50%;
+  left: 0;
+  right: 0;
   bottom: 24px;
   z-index: 60;
   display: flex;
   align-items: center;
-  gap: 14px;
-  max-width: calc(100vw - 32px);
-  padding: 10px 10px 10px 18px;
+  gap: 12px;
+  width: fit-content;
+  max-width: calc(100% - 32px);
+  margin: 0 auto;
+  padding: 10px 18px;
   border-radius: 12px;
   background: var(--text);
   color: var(--bg);
   font-weight: 500;
   box-shadow: var(--shadow);
-  transform: translateX(-50%);
   animation: toast-in var(--base) var(--ease);
 }
+
+.toast:has(.toast-check) { padding-left: 10px; }
+.toast:has(button) { padding-right: 8px; }
 
 .toast button {
   min-height: 36px;
@@ -1271,8 +1276,8 @@ button.person-chip:hover { background: var(--accent-soft); }
 }
 
 @keyframes toast-in {
-  from { opacity: 0; transform: translate(-50%, 10px); }
-  to { opacity: 1; transform: translate(-50%, 0); }
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes pop {

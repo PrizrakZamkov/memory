@@ -298,7 +298,6 @@ const ru = {
 
   'sync.title': 'Синхронизация',
   'sync.text': 'Записи будут на всех твоих устройствах. На сервер уходит только шифр: прочитать истории там нельзя.',
-  'sync.fileMode': 'Синхронизация работает, когда сайт открыт по адресу в интернете, а не из файла.',
   'sync.login': 'Войти через Google',
   'sync.account': ({ email }) => `Аккаунт: ${email}`,
   'sync.last': ({ when }) => `Синхронизировано ${when}`,
@@ -631,7 +630,6 @@ const en = {
 
   'sync.title': 'Sync',
   'sync.text': 'Your records on all your devices. Only ciphertext goes to the server: nobody can read your stories there.',
-  'sync.fileMode': 'Sync works when the site is opened from its web address, not from a file.',
   'sync.login': 'Sign in with Google',
   'sync.account': ({ email }) => `Account: ${email}`,
   'sync.last': ({ when }) => `Synced ${when}`,
