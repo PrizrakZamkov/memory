@@ -215,7 +215,7 @@ export const pt = {
 
   'welcome.lead': 'Um diário particular das pessoas que você conheceu nos jogos e das histórias que viveram juntos.',
   'welcome.point1': 'Os registros ficam neste navegador e sempre criptografados.',
-  'welcome.point2': 'Sem anúncios, sem rastreamento, funciona offline.',
+  'welcome.point2': 'Sem anúncios. Funciona sem internet, e se quiser você pode ligar a sincronização entre seus aparelhos.',
   'welcome.point3': 'Amigos, nicks, histórias e prints num lugar só.',
   'welcome.start': 'Começar',
 

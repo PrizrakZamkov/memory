@@ -214,7 +214,7 @@ export const en = {
 
   'welcome.lead': 'A private journal of the people you met in games and the stories you lived together.',
   'welcome.point1': 'Records stay in this browser and are always encrypted.',
-  'welcome.point2': 'No ads, no tracking, works offline.',
+  'welcome.point2': 'No ads. Works without internet, and you can turn on sync between your devices if you like.',
   'welcome.point3': 'Friends, nicks, shared stories and screenshots in one place.',
   'welcome.start': 'Start',
 

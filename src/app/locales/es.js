@@ -215,7 +215,7 @@ export const es = {
 
   'welcome.lead': 'Un diario privado de la gente que conociste jugando y de las historias que compartes con ella.',
   'welcome.point1': 'Las notas se quedan en este navegador y siempre van cifradas.',
-  'welcome.point2': 'Sin anuncios, sin rastreo, funciona sin conexión.',
+  'welcome.point2': 'Sin anuncios. Funciona sin internet, y si quieres puedes activar la sincronización entre tus dispositivos.',
   'welcome.point3': 'Amigos, nicks, historias y capturas en un solo lugar.',
   'welcome.start': 'Empezar',
 

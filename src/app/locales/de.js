@@ -215,7 +215,7 @@ export const de = {
 
   'welcome.lead': 'Ein privates Tagebuch über die Leute, die du beim Zocken kennengelernt hast, und eure gemeinsamen Geschichten.',
   'welcome.point1': 'Die Einträge bleiben in diesem Browser und sind immer verschlüsselt.',
-  'welcome.point2': 'Keine Werbung, kein Tracking, funktioniert offline.',
+  'welcome.point2': 'Keine Werbung. Funktioniert ohne Internet, und wenn du willst, kannst du die Synchronisierung zwischen deinen Geräten einschalten.',
   'welcome.point3': 'Freunde, Nicknames, gemeinsame Geschichten und Screenshots an einem Ort.',
   'welcome.start': 'Los geht’s',
 

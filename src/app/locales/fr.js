@@ -215,7 +215,7 @@ export const fr = {
 
   'welcome.lead': 'Un journal privé des gens rencontrés en jeu et des histoires vécues ensemble.',
   'welcome.point1': 'Les notes restent dans ce navigateur et sont toujours chiffrées.',
-  'welcome.point2': 'Pas de pub, pas de pistage, fonctionne hors ligne.',
+  'welcome.point2': 'Pas de pub. Fonctionne sans internet, et tu peux activer la synchronisation entre tes appareils si tu veux.',
   'welcome.point3': 'Amis, pseudos, histoires communes et captures au même endroit.',
   'welcome.start': 'Commencer',
 
