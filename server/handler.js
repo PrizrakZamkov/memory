@@ -22,7 +22,8 @@ const GOOGLE = {
   issuers: ['https://accounts.google.com', 'accounts.google.com']
 };
 
-const ID = /^[A-Za-z0-9._-]{1,80}$/;
+// Record and image ids. Dots are allowed for "<id>.thumb", but not at the start.
+const ID = /^[A-Za-z0-9_-][A-Za-z0-9._-]{0,79}$/;
 const B64 = /^[A-Za-z0-9+/]*={0,2}$/;
 const IMAGE_TYPES = new Set(['image/webp', 'image/jpeg', 'image/png']);
 

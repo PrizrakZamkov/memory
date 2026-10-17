@@ -43,7 +43,8 @@ export function useData(db, dataKey, hooks = { current: {} }) {
       setProfile(await repo.loadProfile());
       setLoaded(true);
       const draft = await repo.loadDraft();
-      const removed = await repo.removeUnusedImages(all.people, all.stories, draft).catch(() => []);
+      // With damaged records we cannot tell which images are still used, so keep them all.
+      const removed = all.damaged ? [] : await repo.removeUnusedImages(all.people, all.stories, draft).catch(() => []);
       if (removed.length) hooks.current.onImagesRemoved?.(removed);
     })();
     const urls = imageUrls.current;

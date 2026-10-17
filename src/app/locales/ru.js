@@ -25,7 +25,7 @@ export const ru = {
   'header.search': 'Поиск',
   'header.searchPlaceholder': 'Поиск по историям, людям, никам',
   'header.theme': 'Сменить тему',
-  'header.lang': 'Switch to English',
+  'header.lang': 'Язык',
   'header.lock': 'Заблокировать',
 
   'feed.title': 'Лента',

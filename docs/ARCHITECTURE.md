@@ -1,6 +1,6 @@
 # Architecture
 
-Last updated: 2026-10-17, after stages 3 and 4.
+Last updated: 2026-10-17, after the final review (stage 5).
 
 ## Idea in one paragraph
 
@@ -27,7 +27,8 @@ src/
     useData.js         people, stories, profile in memory, saved through the repo
     useSync.js         sync loop, device requests, sign out
     router.js          hash routes: #/feed #/starred #/people[/id] #/data
-    i18n.js            all UI text, Russian and English, time and greeting helpers
+    i18n.js            language list, detection, time and greeting helpers
+    locales/           UI text, one file per language: en, ru, es, pt, de, fr
   core/                plain JS, no React, covered by tests
     crypto.js          WebCrypto wrappers, recovery key format
     vault.js           data key, its wrapped copies, vault header, re-keying
@@ -77,7 +78,7 @@ IndexedDB database `gamefolk`:
 | records | record id | `{ kind, box, t }` or a tombstone `{ kind, deleted: true, t }` |
 | blobs | image id, `<id>.thumb` | `{ type, box }` encrypted image bytes |
 
-`t` is the time of the last change, used for sync. Unused images are removed when the vault opens (and from the server, when synced).
+`t` is the time of the last change, used for sync. Unused images are removed when the vault opens (and from the server, when synced). A record that fails to decrypt is skipped, not deleted, so one damaged row never locks the user out; while such a row exists, image cleanup is skipped too.
 
 ## Backups and export
 
@@ -114,12 +115,22 @@ The page has a Content Security Policy (meta tag in the file, header on Netlify)
 
 ## Interface
 
-Dark "Ice" theme by default, light theme, Russian and English. Motion is short and uses transform and opacity: cards rise in a stagger, filter changes rearrange cards with View Transitions, the star throws sparks, counters count up, dialogs open with a light spring, images shimmer while decrypting. Everything turns off with "reduce motion". Phones get a bottom bar with a big add button and full-screen dialogs.
+Dark "Ice" theme by default, light theme. Six languages: English, Spanish, Portuguese (Brazil), German, French, Russian. The browser language is used if it is one of them, otherwise English; the choice is saved. Every language has the same keys (checked by a test); plurals use `Intl.PluralRules`, Russian has its own three forms. Search ignores case and accents. Motion is short and uses transform and opacity: cards rise in a stagger, filter changes rearrange cards with View Transitions, the star throws sparks, counters count up, dialogs open with a light spring, images shimmer while decrypting. Everything turns off with "reduce motion". Phones get a bottom bar with a big add button and full-screen dialogs.
 
 ## Tests
 
-`npm test` runs `tests/*.test.js`: crypto, vault, storage, dates, search, backups, zip, export escaping, the server (login checks, origin checks, last-write-wins, isolation between accounts, input validation, pairing, device sign-out, account deletion, session expiry) and sync between two devices through the real handler. The UI is checked with Playwright in Chromium on desktop and phone sizes, offline from the file and online with a local server and a fake Google.
+`npm test` runs `tests/*.test.js`: crypto, vault, storage, damaged records, dates, search, backups, zip, export escaping, translations, the server (login checks, origin checks, last-write-wins, isolation between accounts, input validation, pairing, device sign-out, account deletion, session expiry) and sync between two devices through the real handler. The UI is checked with Playwright in Chromium on desktop and phone sizes, offline from the file and online with a local server and a fake Google.
 
-## Next
+## Final review (stage 5)
 
-5. Final review: an independent security and usability check, fixes, final docs. Ideas for later: passkeys, sharing one story by link, a timeline by years.
+Checked: login flow (state, nonce, PKCE, claims), sessions and cookies, write protection, ownership of every key (all server keys start with the account id from the session), input limits, last-write-wins, pairing (code from the requester's public key, approval only from another device of the same account), backups (strict parsing), export escaping, page CSP and headers, links, image re-encoding (removes EXIF and GPS).
+
+Fixed during the review: server ids can no longer start with a dot; a damaged record no longer blocks opening the vault.
+
+Known limits, by design:
+
+- The page code comes from the hosting. Whoever controls the Netlify or GitHub account can change it, so both need two-factor login.
+- Anyone who gets into the user's Google account can ask to join a device, but gets nothing unless the user approves the request on their own device with a matching code, or knows the recovery key.
+- Free Netlify plan: two rate limit rules (used by the two functions). Keeping the Google app in testing mode with a list of test users is the simplest protection against strangers filling the storage.
+
+Ideas for later: passkeys, sharing one story by link, a timeline by years.

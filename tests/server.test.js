@@ -80,6 +80,8 @@ test('bad input is rejected', async () => {
   assert.equal((await put({ kind: 'story', t: Date.now() + 10 * 86400000, box })).status, 400);
   const badId = await client.fetch('/api/records/..%2Fsess', { method: 'PUT', headers: json, body: JSON.stringify({ kind: 'story', t: 1, box }) });
   assert.equal(badId.status, 400);
+  const dotId = await client.fetch('/api/images/.thumb', { method: 'PUT', headers: json, body: JSON.stringify({ type: 'image/webp', box }) });
+  assert.equal(dotId.status, 400);
   const broken = await client.fetch('/api/records/r1', { method: 'PUT', headers: json, body: '{nope' });
   assert.equal(broken.status, 400);
 });

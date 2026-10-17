@@ -8,13 +8,23 @@ export function createRepo(db, key, onChange = () => {}) {
     async loadAll() {
       const people = [];
       const stories = [];
+      let damaged = 0;
       for (const [id, row] of await db.entries('records')) {
         if (row.deleted) continue;
-        const item = await decryptJson(key, row.box, `${row.kind}:${id}`);
+        // One damaged record must not lock the user out of all the others.
+        // It stays in storage untouched, so a later backup or sync can still fix it.
+        let item;
+        try {
+          item = { ...(await decryptJson(key, row.box, `${row.kind}:${id}`)), id };
+        } catch {
+          damaged++;
+          continue;
+        }
         if (row.kind === 'person') people.push(item);
-        else stories.push(item);
+        else if (row.kind === 'story') stories.push(item);
       }
-      return { people, stories };
+      if (damaged) console.warn(`Gamefolk: ${damaged} records could not be decrypted and were skipped`);
+      return { people, stories, damaged };
     },
 
     async save(kind, item) {

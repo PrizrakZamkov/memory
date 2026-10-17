@@ -65,3 +65,17 @@ test('repo stores records and images only in encrypted form', async () => {
   assert.equal(await repo.loadImage('orphan'), null);
   assert.ok(await repo.loadImage('ph1'));
 });
+
+test('a damaged record is skipped, the rest still opens', async () => {
+  const db = memoryDb();
+  const { dataKey } = await createVault(db);
+  const repo = createRepo(db, dataKey);
+  await repo.save('story', { id: 's1', title: 'Good' });
+  await repo.save('story', { id: 's2', title: 'Broken' });
+  const row = await db.get('records', 's2');
+  row.box.data[0] ^= 1;
+  const all = await repo.loadAll();
+  assert.deepEqual(all.stories.map(s => s.title), ['Good']);
+  assert.equal(all.damaged, 1);
+  assert.ok(await db.get('records', 's2'));
+});

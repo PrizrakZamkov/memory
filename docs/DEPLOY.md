@@ -1,43 +1,56 @@
 # Как выложить Gamefolk в интернет
 
-Всё бесплатно: сайт и сервер синхронизации живут на Netlify, вход через Google. Терминал не нужен, только браузер. Займёт около 20 минут.
+Всё бесплатно: сайт и сервер синхронизации живут на Netlify, вход через Google. Терминал не нужен. Займёт около 30 минут.
+
+Готовых ключей Google в проекте нет и быть не должно: ты создашь их сам в шаге 2 и впишешь только в настройки Netlify. В коде и на GitHub их не будет.
+
+## 0. Залить код на GitHub
+
+Удобнее всего через программу GitHub Desktop, история изменений сохранится.
+
+1. Скачай и установи [GitHub Desktop](https://desktop.github.com), войди в свой аккаунт GitHub.
+2. Распакуй архив с проектом в любую папку. Внутри есть скрытая папка `.git`, не удаляй её: в ней история изменений.
+3. В GitHub Desktop: **File** > **Add local repository** > выбери распакованную папку.
+4. Нажми **Push origin**. Новые коммиты уйдут в репозиторий `PrizrakZamkov/memory`.
+
+Переименовать репозиторий в `gamefolk` можно на GitHub: **Settings** > **General** > **Repository name**. GitHub Desktop подхватит новое имя сам, старые ссылки продолжат работать.
 
 ## 1. Netlify: сайт
 
 1. Зайди на [netlify.com](https://www.netlify.com) и войди через GitHub.
-2. **Add new site** → **Import an existing project** → **GitHub** → выбери репозиторий `gamefolk` (или `memory`).
+2. **Add new site** > **Import an existing project** > **GitHub** > выбери репозиторий `gamefolk` (или `memory`).
 3. Настройки сборки Netlify возьмёт из файла `netlify.toml` сам. Нажми **Deploy**.
-4. Через минуту сайт откроется по адресу вида `https://что-то.netlify.app`. В **Site configuration** → **Change site name** можно поменять его, например на `gamefolk-roma.netlify.app`.
+4. Через минуту сайт откроется по адресу вида `https://что-то.netlify.app`. В **Site configuration** > **Change site name** можно поменять его, например на `gamefolk-roma.netlify.app`.
 
 Уже на этом шаге сайт полностью работает: записи хранятся в браузере. Не будет только синхронизации, пока не сделаны шаги 2 и 3.
 
 ## 2. Google: вход
 
-1. Открой [console.cloud.google.com](https://console.cloud.google.com), вверху слева выбор проекта → **New project**, назови `Gamefolk`, переключись на него.
-2. Меню → **APIs & Services** → **OAuth consent screen** → **Get started**:
+1. Открой [console.cloud.google.com](https://console.cloud.google.com), вверху слева выбор проекта > **New project**, назови `Gamefolk`, переключись на него.
+2. Меню > **APIs & Services** > **OAuth consent screen** > **Get started**:
    - App name: `Gamefolk`, support email: твоя почта;
    - Audience: **External**;
-   - контактная почта, согласие с правилами → **Create**.
-3. Вкладка **Audience**: пока приложение в режиме тестирования, войти смогут только люди из списка **Test users**. Добавь туда себя и друзей. Когда будешь готов открыть сайт всем, нажми **Publish app**. Проверка Google для нашего входа не нужна: мы просим только `openid` и `email`.
-4. Вкладка **Clients** → **Create client**:
+   - контактная почта, согласие с правилами > **Create**.
+3. Вкладка **Audience**: пока приложение в режиме тестирования, войти смогут только люди из списка **Test users** (до 100 адресов). Добавь туда себя и друзей. Это лучшая защита от чужих: посторонний не сможет войти и забить хранилище. Открыть вход всем можно потом кнопкой **Publish app**. Проверка Google для нашего входа не нужна: мы просим только `openid` и `email`.
+4. Вкладка **Clients** > **Create client**:
    - Application type: **Web application**;
    - Authorized redirect URIs: `https://твой-адрес.netlify.app/api/auth/google/callback` (точно так, без слеша в конце).
-5. Скопируй **Client ID** и **Client secret**. Секрет показывается один раз.
+5. Появятся **Client ID** и **Client secret**: это и есть ключи. Скопируй оба, секрет показывается один раз. Никуда, кроме Netlify, их не вставляй.
 
 ## 3. Netlify: ключи
 
-1. В Netlify: **Site configuration** → **Environment variables** → **Add a variable**:
+1. В Netlify: **Site configuration** > **Environment variables** > **Add a variable**:
    - `GOOGLE_CLIENT_ID` = Client ID из шага 2;
    - `GOOGLE_CLIENT_SECRET` = Client secret из шага 2;
    - `SITE_URL` = `https://твой-адрес.netlify.app`.
-2. **Deploys** → **Trigger deploy** → **Deploy site**, чтобы ключи подхватились.
+2. **Deploys** > **Trigger deploy** > **Deploy site**, чтобы ключи подхватились.
 
 Готово. В разделе «Данные» появится «Войти через Google».
 
 ## Безопасность, которую стоит включить
 
 - Двухфакторный вход на GitHub, Netlify и Google.
-- Никому не показывай `GOOGLE_CLIENT_SECRET`. Если он утёк: в Google **Clients** → **Add secret**, старый удалить, новый вставить в Netlify.
+- Никому не показывай `GOOGLE_CLIENT_SECRET`. Если он утёк: в Google **Clients** > **Add secret**, старый удалить, новый вставить в Netlify.
 - На бесплатном тарифе Netlify 300 кредитов в месяц. Если они закончатся, сайт встанет на паузу до следующего месяца, данные не пропадут. Netlify пришлёт письмо на 50%, 75% и 100%.
 - Проверь, открывается ли сайт без VPN у тебя и у пары друзей: у части российских провайдеров Netlify бывает недоступен.
 
