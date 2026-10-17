@@ -57,6 +57,17 @@
 .icon-btn.bordered { border: 1px solid var(--line); width: 40px; }
 .lang-btn { font-size: 13px; font-weight: 600; letter-spacing: 0.02em; }
 
+.lang-select { position: relative; }
+.lang-select select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  opacity: 0;
+  font-size: 16px;
+  cursor: pointer;
+}
+.lang-select:has(select:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+
 .link-btn {
   display: inline-flex;
   align-items: center;

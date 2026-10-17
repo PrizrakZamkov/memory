@@ -1,7 +1,7 @@
 // Small shared pieces: avatar, encrypted image, modal, toast, chip input, date picker.
 import { useEffect, useId, useRef, useState } from 'react';
 import { Icon } from './Icon.jsx';
-import { useI18n } from '../app/i18n.js';
+import { LANGUAGES, useI18n } from '../app/i18n.js';
 import { useApp } from '../app/context.js';
 import { avatarColor, fullName, initials } from '../core/model.js';
 import { currentSeason, seasonName, todayIso } from '../core/dates.js';
@@ -74,6 +74,19 @@ export function Modal({ title, onClose, children, footer, size = 'md', labelledB
         {footer && <footer className="modal-foot">{footer}</footer>}
       </section>
     </div>
+  );
+}
+
+// Language menu: a native select under a small button, so phones show their own picker.
+export function LangSelect({ lang, onChange }) {
+  const { t } = useI18n();
+  return (
+    <span className="icon-btn lang-btn lang-select">
+      <span aria-hidden="true">{lang.toUpperCase()}</span>
+      <select value={lang} aria-label={t('header.lang')} onChange={event => onChange(event.target.value)}>
+        {LANGUAGES.map(item => <option key={item.code} value={item.code} lang={item.code}>{item.name}</option>)}
+      </select>
+    </span>
   );
 }
 

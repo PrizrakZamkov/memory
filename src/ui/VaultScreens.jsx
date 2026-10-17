@@ -5,6 +5,7 @@ import { Icon } from './Icon.jsx';
 import { RecoveryKeyBox } from './DataPage.jsx';
 import { JoinPanel } from './JoinPanel.jsx';
 import { Campfire } from './Illustrations.jsx';
+import { LangSelect } from './common.jsx';
 import { useI18n } from '../app/i18n.js';
 import { createApi, syncAvailable } from '../core/api.js';
 import { backupSummary, parseBackup } from '../core/backup.js';
@@ -15,7 +16,7 @@ function Frame({ children, onLang, lang }) {
     <main className="gate">
       <div className="gate-top">
         <span className="logo">Gamefolk</span>
-        <button type="button" className="icon-btn lang-btn" onClick={onLang}>{lang.toUpperCase()}</button>
+        <LangSelect lang={lang} onChange={onLang} />
       </div>
       <div className="gate-card card">{children}</div>
     </main>

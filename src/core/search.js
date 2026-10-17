@@ -5,7 +5,8 @@ import { currentSeason, sortKey, yearOf } from './dates.js';
 export const EMPTY_FILTERS = { query: '', game: '', person: '', tag: '', year: '' };
 
 function normalize(value) {
-  return String(value || '').toLocaleLowerCase().replace(/ё/g, 'е');
+  // Case and accents do not matter: "pokemon" finds "Pokémon", "ежик" finds "ёжик".
+  return String(value || '').toLocaleLowerCase().normalize('NFD').replace(/\p{M}/gu, '').normalize('NFC');
 }
 
 function storyText(story, peopleById) {

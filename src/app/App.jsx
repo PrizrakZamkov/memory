@@ -48,7 +48,6 @@ export function App() {
     setThemeState(next);
     writeSetting('gamefolk.theme', next);
   }, []);
-  const toggleLang = () => setLang(lang === 'ru' ? 'en' : 'ru');
 
   useEffect(() => {
     document.documentElement.lang = lang;
@@ -67,21 +66,21 @@ export function App() {
   const clearLogin = useCallback(() => setLogin(null), []);
 
   let screen = null;
-  if (vault.status === 'error') screen = <ErrorScreen onLang={toggleLang} />;
+  if (vault.status === 'error') screen = <ErrorScreen onLang={setLang} />;
   if (vault.status === 'new' && login === 'ok') {
     screen = (
       <ConnectScreen
-        onLang={toggleLang}
+        onLang={setLang}
         onKey={async (key, header, email) => { await vault.createFromAccount(key, header, email); clearLogin(); }}
         onStartFresh={() => vault.create()}
         onCancel={async () => { await createApi().post('auth/logout').catch(() => {}); clearLogin(); }}
       />
     );
   } else if (vault.status === 'new') {
-    screen = <WelcomeScreen onStart={vault.create} onRestore={vault.restoreFromBackup} onLang={toggleLang} loginFailed={login === 'failed'} />;
+    screen = <WelcomeScreen onStart={vault.create} onRestore={vault.restoreFromBackup} onLang={setLang} loginFailed={login === 'failed'} />;
   }
-  if (vault.status === 'recovery') screen = <RecoveryScreen recoveryKey={vault.recoveryText} onDone={vault.confirmRecovery} onLang={toggleLang} />;
-  if (vault.status === 'locked') screen = <UnlockScreen onPasscode={vault.unlockWithPasscode} onRecovery={vault.unlockWithRecovery} onLang={toggleLang} />;
+  if (vault.status === 'recovery') screen = <RecoveryScreen recoveryKey={vault.recoveryText} onDone={vault.confirmRecovery} onLang={setLang} />;
+  if (vault.status === 'locked') screen = <UnlockScreen onPasscode={vault.unlockWithPasscode} onRecovery={vault.unlockWithRecovery} onLang={setLang} />;
   if (vault.status === 'open') {
     screen = (
       <Journal

@@ -15,37 +15,53 @@ export function yearOf(when) {
 
 const SEASONS = {
   ru: { winter: 'Зима', spring: 'Весна', summer: 'Лето', autumn: 'Осень' },
-  en: { winter: 'Winter', spring: 'Spring', summer: 'Summer', autumn: 'Autumn' }
+  en: { winter: 'Winter', spring: 'Spring', summer: 'Summer', autumn: 'Autumn' },
+  es: { winter: 'Invierno', spring: 'Primavera', summer: 'Verano', autumn: 'Otoño' },
+  pt: { winter: 'Inverno', spring: 'Primavera', summer: 'Verão', autumn: 'Outono' },
+  de: { winter: 'Winter', spring: 'Frühling', summer: 'Sommer', autumn: 'Herbst' },
+  fr: { winter: 'Hiver', spring: 'Printemps', summer: 'Été', autumn: 'Automne' }
 };
 
-// Genitive forms for "since spring 2019" in Russian.
+// Season inside a sentence: genitive in Russian ("с весны 2019"), lower case where nouns are not capitalized.
 const SEASONS_SINCE = {
   ru: { winter: 'зимы', spring: 'весны', summer: 'лета', autumn: 'осени' },
-  en: { winter: 'winter', spring: 'spring', summer: 'summer', autumn: 'autumn' }
+  en: { winter: 'winter', spring: 'spring', summer: 'summer', autumn: 'autumn' },
+  es: { winter: 'invierno', spring: 'primavera', summer: 'verano', autumn: 'otoño' },
+  pt: { winter: 'inverno', spring: 'primavera', summer: 'verão', autumn: 'outono' },
+  de: SEASONS.de,
+  fr: { winter: 'hiver', spring: 'printemps', summer: 'été', autumn: 'automne' }
 };
+
+// Spanish and Portuguese say "Primavera de 2019".
+const OF_YEAR = { es: ' de ', pt: ' de ' };
 
 export function seasonName(season, lang) {
   return SEASONS[lang]?.[season] || SEASONS.en[season];
 }
 
+function seasonYear(season, year, lang) {
+  return `${season}${OF_YEAR[lang] || ' '}${year}`;
+}
+
 export function formatWhen(when, lang) {
   if (!when) return '';
   if (when.kind === 'approx') {
-    return when.season ? `${seasonName(when.season, lang)} ${when.year}` : String(when.year);
+    return when.season ? seasonYear(seasonName(when.season, lang), when.year, lang) : String(when.year);
   }
   const [y, m, d] = when.date.split('-').map(Number);
   const date = new Date(Date.UTC(y, m - 1, d));
-  const text = new Intl.DateTimeFormat(lang === 'ru' ? 'ru-RU' : 'en-US', {
+  const text = new Intl.DateTimeFormat(lang || 'en', {
     day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC'
   }).format(date);
   return text.replace(/\s?г\.$/, '');
 }
 
-// Text after "since": "spring 2019", or the genitive form in Russian.
+// Text after "since" or a label: "spring 2019", or the genitive form in Russian.
 export function formatSince(when, lang) {
   if (!when) return '';
   if (when.kind === 'approx' && when.season) {
-    return `${SEASONS_SINCE[lang]?.[when.season] || when.season} ${when.year}`;
+    const name = SEASONS_SINCE[lang]?.[when.season] || when.season;
+    return seasonYear(name, when.year, lang);
   }
   return formatWhen(when, lang);
 }

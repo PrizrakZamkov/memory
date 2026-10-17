@@ -2,6 +2,7 @@ import { Icon } from './Icon.jsx';
 import { useI18n } from '../app/i18n.js';
 import { useApp } from '../app/context.js';
 import { go } from '../app/router.js';
+import { LangSelect } from './common.jsx';
 
 const NAV = [
   { page: 'feed', icon: 'feed' },
@@ -43,9 +44,7 @@ export function Header({ route, query, onQuery }) {
         <button type="button" className="btn btn-primary desktop-only" onClick={() => ui.openStory()}>
           <Icon name="plus" size={16} strokeWidth={2.4} />{t('action.story')}
         </button>
-        <button type="button" className="icon-btn lang-btn" aria-label={t('header.lang')} onClick={() => setLang(lang === 'ru' ? 'en' : 'ru')}>
-          {lang.toUpperCase()}
-        </button>
+        <LangSelect lang={lang} onChange={setLang} />
         <button type="button" className="icon-btn" aria-label={t('header.theme')} onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
           <Icon name={theme === 'dark' ? 'moon' : 'sun'} />
         </button>

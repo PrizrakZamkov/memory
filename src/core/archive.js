@@ -42,10 +42,17 @@ p{white-space:pre-line;margin:0 0 12px}
 .person{padding:20px 0;border-top:1px solid #ddd5c8}
 .kv{font:15px/1.6 system-ui,sans-serif;color:#3d3830}`;
 
+const BOOK_TEXT = {
+  ru: { stories: 'Истории', people: 'Люди', met: 'Как познакомились', nicks: 'Ники', contacts: 'Контакты', note: 'Заметка', made: 'Выгружено из Gamefolk' },
+  en: { stories: 'Stories', people: 'People', met: 'How we met', nicks: 'Nicks', contacts: 'Contacts', note: 'Note', made: 'Exported from Gamefolk' },
+  es: { stories: 'Historias', people: 'Personas', met: 'Cómo nos conocimos', nicks: 'Nicks', contacts: 'Contactos', note: 'Nota', made: 'Exportado desde Gamefolk' },
+  pt: { stories: 'Histórias', people: 'Pessoas', met: 'Como nos conhecemos', nicks: 'Nicks', contacts: 'Contatos', note: 'Nota', made: 'Exportado do Gamefolk' },
+  de: { stories: 'Geschichten', people: 'Leute', met: 'Wie wir uns kennengelernt haben', nicks: 'Nicknames', contacts: 'Kontakte', note: 'Notiz', made: 'Aus Gamefolk exportiert' },
+  fr: { stories: 'Histoires', people: 'Personnes', met: 'Notre rencontre', nicks: 'Pseudos', contacts: 'Contacts', note: 'Note', made: 'Exporté depuis Gamefolk' }
+};
+
 function bookHtml({ people, stories, peopleById, images, lang, title }) {
-  const t = lang === 'ru'
-    ? { stories: 'Истории', people: 'Люди', met: 'Как познакомились', nicks: 'Ники', contacts: 'Контакты', note: 'Заметка', made: 'Выгружено из Gamefolk' }
-    : { stories: 'Stories', people: 'People', met: 'How we met', nicks: 'Nicks', contacts: 'Contacts', note: 'Note', made: 'Exported from Gamefolk' };
+  const t = BOOK_TEXT[lang] || BOOK_TEXT.en;
 
   const storyBlocks = stories.map(story => {
     const who = [...story.people.map(id => peopleById.get(id)).filter(Boolean).map(fullName), ...story.names];
